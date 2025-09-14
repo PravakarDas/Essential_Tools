@@ -1,4 +1,4 @@
-(function(){
+(() => {
   // Theme preference (emoji toggle)
   const storageKey = 'theme-preference';
   const html = document.documentElement;
@@ -10,7 +10,7 @@
     const btn = document.getElementById('theme-toggle');
     if (btn){
       btn.setAttribute('aria-label', theme.value);
-      btn.textContent = theme.value === 'dark' ? '🌑' : '☀';
+      btn.textContent = theme.value === 'dark' ? '☀' : '🌑';
     }
   };
   const setPreference = () => { localStorage.setItem(storageKey, theme.value); reflectPreference(); };
@@ -31,7 +31,7 @@
     const src = lastActiveSearch;
     const q = (src && src.value || '').trim().toLowerCase();
     items.forEach((el) => {
-      const cat = el.getAttribute('data-category');
+      const cat = el.getAttribute('data-category') || '';
       const txt = (el.getAttribute('data-title') + ' ' + el.getAttribute('data-desc'));
       const matchCat = (activeCat === 'all') || (cat === activeCat);
       const matchText = !q || txt.includes(q);
@@ -72,6 +72,45 @@
     });
   }
 
+  // Sorting via checkboxes in sidebar
+  if (grid && items.length){
+    const sortChecks = Array.from(document.querySelectorAll('.sort-check'));
+    let currentSort = null; // 'az' | 'za' | 'new' | null
+    const compareAZ = (a,b) => a.localeCompare(b, undefined, {sensitivity:'base'});
+    const sortGrid = (mode) => {
+      if (!mode){
+        const byIndex = [...items].sort((a,b)=> (parseInt(a.dataset.index||'0',10) - parseInt(b.dataset.index||'0',10)));
+        byIndex.forEach(el => grid.appendChild(el));
+        return;
+      }
+      const sorted = [...items].sort((a,b) => {
+        if (mode === 'az' || mode === 'za'){
+          const ta = (a.getAttribute('data-title')||'');
+          const tb = (b.getAttribute('data-title')||'');
+          const cmp = compareAZ(ta, tb);
+          return mode === 'az' ? cmp : -cmp;
+        }
+        if (mode === 'new'){
+          const ia = parseInt(a.dataset.index||'0',10);
+          const ib = parseInt(b.dataset.index||'0',10);
+          return ib - ia; // newest first (higher index)
+        }
+        return 0;
+      });
+      sorted.forEach(el => grid.appendChild(el));
+    };
+    const enforceSingle = (target) => {
+      sortChecks.forEach(cb => { if (cb !== target) cb.checked = false; });
+    };
+    sortChecks.forEach(cb => cb.addEventListener('change', (e) => {
+      const t = e.target;
+      if (t.checked){ enforceSingle(t); currentSort = t.value; }
+      else { currentSort = null; }
+      sortGrid(currentSort);
+      applyFilters();
+    }));
+  }
+
   // Job lifecycle: track job IDs and cleanup on unload
   const JOBS_KEY = 'neonpdf-jobs';
   function getJobs(){ try { return JSON.parse(sessionStorage.getItem(JOBS_KEY) || '[]'); } catch { return []; } }
@@ -83,7 +122,7 @@
     ids.forEach((id) => {
       try{ navigator.sendBeacon(`/api/jobs/${id}/delete`, new Blob([], {type: 'text/plain'})); } catch {}
     });
-    // clear local record
     try{ sessionStorage.removeItem(JOBS_KEY); } catch {}
   });
 })();
+

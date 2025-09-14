@@ -30,10 +30,6 @@ def create_app(test_config: dict | None = None) -> Flask:
     app.register_blueprint(main_bp)
     app.register_blueprint(api_jobs_bp, url_prefix="/api")
 
-    # Healthcheck
-    @app.get("/healthz")
-    def healthz():
-        return {"status": "ok"}
 
     return app
 

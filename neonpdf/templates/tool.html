@@ -3,6 +3,43 @@
   <h1 class="h3 mb-3">{{ tool.title }}</h1>
   <p class="text-secondary">{{ tool.desc }}</p>
 
+  {% if tool.slug == 'merge' %}
+  <div class="mb-3">
+    <label class="form-label">Upload PDFs</label>
+    <input id="merge-files" class="form-control" type="file" accept="application/pdf" multiple>
+    <div class="form-text">Select at least two PDFs to merge. Files never leave your browser.</div>
+  </div>
+
+  <button id="adv-toggle" class="btn btn-sm btn-outline-neon mb-3" type="button" aria-expanded="false">Advanced Options</button>
+  <div id="adv-options" class="card card-body mb-3" style="display:none;">
+    <div class="mb-3">
+      <label class="form-label">Reorder (drag to arrange)</label>
+      <ul id="merge-list" class="list-group small"></ul>
+    </div>
+    <div class="row g-2">
+      <div class="col-12 col-md-6">
+        <label class="form-label">Page size</label>
+        <select id="page-size" class="form-select">
+          <option value="keep" selected>Keep original</option>
+          <option value="a4p">A4 Portrait</option>
+          <option value="a4l">A4 Landscape</option>
+          <option value="letterp">Letter Portrait</option>
+          <option value="letterl">Letter Landscape</option>
+        </select>
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Front page (PDF or image)</label>
+        <input id="front-file" class="form-control" type="file" accept="application/pdf,image/*">
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 align-items-center mb-2">
+    <button id="merge-go" class="btn btn-neon" disabled>MERGE</button>
+    <a id="merge-download" class="btn btn-sm btn-outline-neon disabled" role="button" aria-disabled="true">Download 🖨</a>
+    <div id="merge-status" class="text-secondary small"></div>
+  </div>
+  {% else %}
   <form id="job-form" class="mb-3">
     <input type="hidden" name="tool" value="{{ tool.slug }}">
     <div class="mb-3">
@@ -22,9 +59,187 @@
     </div>
     <ul id="results" class="list-unstyled mt-3"></ul>
   </div>
+  {% endif %}
 {% endblock %}
 
 {% block scripts %}
+{% if tool.slug == 'merge' %}
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script>
+  (() => {
+    const fileInput = document.getElementById('merge-files');
+    const list = document.getElementById('merge-list');
+    const advToggle = document.getElementById('adv-toggle');
+    const advBox = document.getElementById('adv-options');
+    const pageSize = document.getElementById('page-size');
+    const frontInput = document.getElementById('front-file');
+    const goBtn = document.getElementById('merge-go');
+    const dlBtn = document.getElementById('merge-download');
+    const status = document.getElementById('merge-status');
+
+    const PAGE_SIZES = {
+      keep: null,
+      a4p: [595.28, 841.89],
+      a4l: [841.89, 595.28],
+      letterp: [612, 792],
+      letterl: [792, 612],
+    };
+
+    let files = [];
+    let blobUrl = null;
+
+    function revokeBlob(){
+      if (blobUrl){ URL.revokeObjectURL(blobUrl); blobUrl = null; }
+      dlBtn.classList.add('disabled');
+      dlBtn.setAttribute('aria-disabled', 'true');
+      dlBtn.removeAttribute('href');
+      dlBtn.removeAttribute('download');
+    }
+
+    function setStatus(msg){ status.textContent = msg || ''; }
+
+    function rebuildList(){
+      list.innerHTML = '';
+      files.forEach((f, idx) => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+        li.textContent = f.name;
+        li.draggable = true;
+        li.dataset.index = String(idx);
+        const grip = document.createElement('span');
+        grip.className = 'text-secondary';
+        grip.textContent = '↕';
+        li.appendChild(grip);
+        li.addEventListener('dragstart', (e)=>{
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', String(idx));
+        });
+        li.addEventListener('dragover', (e)=>{ e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+        li.addEventListener('drop', (e)=>{
+          e.preventDefault();
+          const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
+          const to = parseInt(li.dataset.index, 10);
+          if (Number.isInteger(from) && Number.isInteger(to) && from !== to){
+            const moved = files.splice(from, 1)[0];
+            files.splice(to, 0, moved);
+            rebuildList();
+          }
+        });
+        list.appendChild(li);
+      });
+    }
+
+    fileInput.addEventListener('change', () => {
+      files = Array.from(fileInput.files || []).map(f => ({ file: f, name: f.name }));
+      rebuildList();
+      goBtn.disabled = files.length < 2;
+      revokeBlob();
+      setStatus(files.length ? `${files.length} file(s) ready` : '');
+    });
+
+    advToggle.addEventListener('click', () => {
+      const show = advBox.style.display === 'none';
+      advBox.style.display = show ? '' : 'none';
+      advToggle.setAttribute('aria-expanded', String(show));
+    });
+
+    async function readAsArrayBuffer(file){
+      return await file.arrayBuffer();
+    }
+
+    async function addFrontPageIfAny(doc, targetSize){
+      const f = frontInput.files && frontInput.files[0];
+      if (!f) return;
+      // PDF front page
+      if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')){
+        const bytes = await readAsArrayBuffer(f);
+        const src = await PDFLib.PDFDocument.load(bytes);
+        if (PAGE_SIZES.keep === targetSize){
+          const [p] = await doc.copyPages(src, [0]);
+          doc.addPage(p);
+        } else {
+          const [epage] = await doc.embedPdf(bytes, [0]);
+          const [tw, th] = targetSize;
+          const page = doc.addPage([tw, th]);
+          const scale = Math.min(tw / epage.width, th / epage.height);
+          const w = epage.width * scale, h = epage.height * scale;
+          const x = (tw - w) / 2, y = (th - h) / 2;
+          page.drawPage(epage, { x, y, width: w, height: h });
+        }
+        return;
+      }
+      // Image front page
+      const bytes = await readAsArrayBuffer(f);
+      let img;
+      try {
+        if (f.type === 'image/png' || f.name.toLowerCase().endsWith('.png'))
+          img = await doc.embedPng(bytes);
+        else
+          img = await doc.embedJpg(bytes);
+      } catch {
+        img = await doc.embedPng(bytes); // fallback
+      }
+      let tw, th;
+      if (targetSize){ [tw, th] = targetSize; }
+      else { tw = img.width; th = img.height; }
+      const page = doc.addPage([tw, th]);
+      const scale = Math.min(tw / img.width, th / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      const x = (tw - w) / 2, y = (th - h) / 2;
+      page.drawImage(img, { x, y, width: w, height: h });
+    }
+
+    async function doMerge(){
+      revokeBlob();
+      setStatus('Merging...');
+      const sizeKey = pageSize.value || 'keep';
+      const targetSize = PAGE_SIZES[sizeKey];
+      const doc = await PDFLib.PDFDocument.create();
+
+      // Front page if provided
+      await addFrontPageIfAny(doc, targetSize);
+
+      for (const item of files){
+        const f = item.file;
+        const bytes = await readAsArrayBuffer(f);
+        const srcDoc = await PDFLib.PDFDocument.load(bytes);
+        const total = srcDoc.getPageCount();
+        if (!targetSize){
+          const pages = await doc.copyPages(srcDoc, srcDoc.getPageIndices());
+          pages.forEach(p => doc.addPage(p));
+        } else {
+          for (let i = 0; i < total; i++){
+            const [epage] = await doc.embedPdf(bytes, [i]);
+            const [tw, th] = targetSize;
+            const page = doc.addPage([tw, th]);
+            const scale = Math.min(tw / epage.width, th / epage.height);
+            const w = epage.width * scale, h = epage.height * scale;
+            const x = (tw - w) / 2, y = (th - h) / 2;
+            page.drawPage(epage, { x, y, width: w, height: h });
+          }
+        }
+      }
+
+      const bytes = await doc.save({ updateFieldAppearances: false });
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      blobUrl = URL.createObjectURL(blob);
+      const name = `merged.pdf`;
+      dlBtn.href = blobUrl;
+      dlBtn.download = name;
+      dlBtn.classList.remove('disabled');
+      dlBtn.removeAttribute('aria-disabled');
+      setStatus('Done.');
+    }
+
+    goBtn.addEventListener('click', async () => {
+      if (files.length < 2) return;
+      try { await doMerge(); } catch (e) { console.error(e); setStatus('Error merging'); }
+    });
+
+    window.addEventListener('beforeunload', () => { revokeBlob(); files = []; });
+  })();
+ </script>
+{% else %}
 <script>
   const form = document.getElementById('job-form');
   const statusBox = document.getElementById('job-status');
@@ -34,7 +249,6 @@
   const optionsArea = document.getElementById('options-area');
   const toolSlug = '{{ tool.slug }}';
 
-  // Build dynamic options per tool
   function buildOptions(slug){
     optionsArea.innerHTML = '';
     if (slug === 'split'){
@@ -74,7 +288,6 @@
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
-    // Inject options JSON based on built form
     let options = {};
     if (toolSlug === 'split'){
       const s = document.getElementById('opt-start').value;
@@ -119,16 +332,17 @@
     }
     setTimeout(() => pollJob(id), 1000);
   }
-  // Avoid deleting job on download navigation
   results.addEventListener('click', (e) => {
     const a = e.target.closest('a[href]');
     if(!a) return;
     try{
       const u = new URL(a.getAttribute('href'), window.location.origin);
       const parts = u.pathname.split('/');
-      const jid = parts[3]; // /api/download/<job_id>/...
+      const jid = parts[3];
       if (jid && window.neonpdfRemoveJob) window.neonpdfRemoveJob(jid);
     } catch {}
   });
 </script>
+{% endif %}
 {% endblock %}
+

@@ -9,12 +9,13 @@
 .tool-card{
   border:1px solid rgba(0,240,255,.25);
   transition: transform .15s ease, box-shadow .2s ease;
+  position: relative;
 }
 .tool-card:hover{
   transform: translateY(-1px);
   box-shadow: 0 0 24px rgba(0,240,255,.3), 0 6px 20px rgba(0,0,0,.35);
 }
-.sidebar{ min-height: calc(100vh - 56px); border-right:1px solid rgba(255,255,255,.1); }
+.sidebar{ min-height: calc(100vh - var(--header-h) - var(--footer-h)); border-right:1px solid rgba(255,255,255,.1); }
 .footer{ background: rgba(0,0,0,.05); }
 .progress-bar.bg-neon{ background: linear-gradient(90deg, var(--neon), var(--neon-2)); }
 
@@ -46,4 +47,13 @@
 [data-bs-theme="light"] .btn-neon{ color:#fff; }
 
 /* Theme emoji toggle minimal spacing */
-#theme-toggle { line-height: 1; font-size: 18px; }
+#theme-toggle { line-height: 1; font-size: 18px; border: none !important; background: transparent !important; color: var(--neon); box-shadow: none !important; }
+
+/* Fixed header/footer spacing */
+:root{ --header-h: 56px; --footer-h: 44px; }
+.pt-fixed-header{ padding-top: var(--header-h); }
+.pb-fixed-footer{ padding-bottom: calc(var(--footer-h) + 6px); }
+
+/* Tool card hover-reveal description */
+.tool-card .card-text{ max-height: 0; opacity: 0; overflow: hidden; transition: max-height .2s ease, opacity .2s ease; }
+.tool-card:hover .card-text{ max-height: 160px; opacity: 1; }
