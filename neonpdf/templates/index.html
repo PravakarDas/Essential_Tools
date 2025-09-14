@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h1 class="h3 mb-3">Tools</h1>
+  <div id="tools-grid" class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3">
+    {% for t in tools %}
+      <div class="col tool-item" data-title="{{ t.title|lower }}" data-desc="{{ t.desc|lower }}" data-category="{{ t.category }}">
+        <div class="card tool-card h-100">
+          <div class="card-body">
+            <h5 class="card-title">{{ t.title }}</h5>
+            <p class="card-text small text-secondary">{{ t.desc }}</p>
+            <a href="/tool/{{ t.slug }}" class="stretched-link btn btn-sm btn-neon">Open</a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}

@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+
+# Virtual envs
+.venv/
+venv/
+ENV/
+env/
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+
+# Environment files
+.env
+.env.*
+
+# Flask instance data
+instance/
+
+# OS / misc
+.DS_Store
+Thumbs.db
+node_modules/

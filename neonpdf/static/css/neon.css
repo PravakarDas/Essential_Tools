@@ -1,0 +1,49 @@
+.bg-neon{ background: #0b0f14; }
+.btn-neon{
+  color:#fff; background: var(--neon); border: none; box-shadow:0 0 12px rgba(0,240,255,.4);
+}
+.btn-outline-neon{
+  color: var(--neon); border-color: var(--neon);
+}
+.btn-neon:hover{ filter: brightness(.9); }
+.tool-card{
+  border:1px solid rgba(0,240,255,.25);
+  transition: transform .15s ease, box-shadow .2s ease;
+}
+.tool-card:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 0 24px rgba(0,240,255,.3), 0 6px 20px rgba(0,0,0,.35);
+}
+.sidebar{ min-height: calc(100vh - 56px); border-right:1px solid rgba(255,255,255,.1); }
+.footer{ background: rgba(0,0,0,.05); }
+.progress-bar.bg-neon{ background: linear-gradient(90deg, var(--neon), var(--neon-2)); }
+
+/* Focus styles */
+:focus-visible{ outline: 2px dashed var(--neon); outline-offset: 2px; }
+
+/* Color palettes */
+[data-bs-theme="light"]{
+  /* Light palette per request */
+  --neon: #647FBC;         /* CTA foreground */
+  --neon-2: #91ADC8;       /* gradient secondary */
+  --bs-body-bg: #FAFDD6;   /* primary light background */
+  --bs-body-color: #212529;
+}
+
+[data-bs-theme="dark"]{
+  --neon: #A8FBD3;
+  --neon-2: #4FB7B3;
+  --bs-body-bg: #0b0f14;
+  --bs-body-color: #eaeef3;
+}
+
+/* Utility background swatches for palettes */
+[data-bs-theme="light"] .bg-neon{ background: #AED6CF; }
+[data-bs-theme="dark"] .bg-neon{ background: #31326F; }
+
+/* Adjust CTA contrast per theme */
+[data-bs-theme="dark"] .btn-neon{ color:#0b0f14; }
+[data-bs-theme="light"] .btn-neon{ color:#fff; }
+
+/* Theme emoji toggle minimal spacing */
+#theme-toggle { line-height: 1; font-size: 18px; }
