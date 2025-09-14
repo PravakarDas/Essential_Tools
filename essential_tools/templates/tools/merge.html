@@ -1,9 +1,8 @@
 {% extends 'base.html' %}
 {% block content %}
-  <h1 class="h3 mb-3">{{ tool.title }}</h1>
-  <p class="text-secondary">{{ tool.desc }}</p>
+  <h1 class="h3 mb-3">Merge PDF</h1>
+  <p class="text-secondary">Combine multiple PDFs into one.</p>
 
-  {% if tool.slug == 'merge' %}
   <div class="mb-3">
     <label class="form-label">Upload PDFs</label>
     <input id="merge-files" class="form-control" type="file" accept="application/pdf" multiple>
@@ -36,34 +35,12 @@
 
   <div class="d-flex gap-2 align-items-center mb-2">
     <button id="merge-go" class="btn btn-neon" disabled>MERGE</button>
-    <a id="merge-download" class="btn btn-sm btn-outline-neon disabled" role="button" aria-disabled="true">Download 🖨</a>
+    <a id="merge-download" class="btn btn-sm btn-outline-neon disabled" role="button" aria-disabled="true">Download</a>
     <div id="merge-status" class="text-secondary small"></div>
   </div>
-  {% else %}
-  <form id="job-form" class="mb-3">
-    <input type="hidden" name="tool" value="{{ tool.slug }}">
-    <div class="mb-3">
-      <label class="form-label">Files</label>
-      <input class="form-control" type="file" name="files" multiple>
-    </div>
-    <div id="options-area" class="mb-3"></div>
-    <button class="btn btn-neon" type="submit">Queue Job</button>
-  </form>
-
-  <div id="job-status" class="d-none">
-    <div class="d-flex align-items-center gap-2">
-      <strong>Status:</strong> <span id="status-text">queued</span>
-      <div class="progress flex-grow-1" style="height: 6px;">
-        <div id="status-progress" class="progress-bar bg-neon" role="progressbar" style="width: 0%"></div>
-      </div>
-    </div>
-    <ul id="results" class="list-unstyled mt-3"></ul>
-  </div>
-  {% endif %}
 {% endblock %}
 
 {% block scripts %}
-{% if tool.slug == 'merge' %}
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script>
   (() => {
@@ -108,7 +85,7 @@
         li.dataset.index = String(idx);
         const grip = document.createElement('span');
         grip.className = 'text-secondary';
-        grip.textContent = '↕';
+        grip.textContent = '≡';
         li.appendChild(grip);
         li.addEventListener('dragstart', (e)=>{
           e.dataTransfer.effectAllowed = 'move';
@@ -222,7 +199,7 @@
 
       const bytes = await doc.save({ updateFieldAppearances: false });
       const blob = new Blob([bytes], { type: 'application/pdf' });
-      blobUrl = URL.createObjectURL(blob);
+      const blobUrl = URL.createObjectURL(blob);
       const name = `merged.pdf`;
       dlBtn.href = blobUrl;
       dlBtn.download = name;
@@ -236,113 +213,8 @@
       try { await doMerge(); } catch (e) { console.error(e); setStatus('Error merging'); }
     });
 
-    window.addEventListener('beforeunload', () => { revokeBlob(); files = []; });
+    window.addEventListener('beforeunload', () => { files = []; });
   })();
  </script>
-{% else %}
-<script>
-  const form = document.getElementById('job-form');
-  const statusBox = document.getElementById('job-status');
-  const statusText = document.getElementById('status-text');
-  const statusProg = document.getElementById('status-progress');
-  const results = document.getElementById('results');
-  const optionsArea = document.getElementById('options-area');
-  const toolSlug = '{{ tool.slug }}';
-
-  function buildOptions(slug){
-    optionsArea.innerHTML = '';
-    if (slug === 'split'){
-      optionsArea.innerHTML = `
-        <div class="row g-2">
-          <div class="col-6"><label class="form-label">Start page</label><input class="form-control" type="number" min="1" id="opt-start"></div>
-          <div class="col-6"><label class="form-label">End page</label><input class="form-control" type="number" min="1" id="opt-end"></div>
-        </div>`;
-    } else if (slug === 'rotate'){
-      optionsArea.innerHTML = `
-        <div class="row g-2">
-          <div class="col-6"><label class="form-label">Degrees</label>
-            <select id="opt-deg" class="form-select">
-              <option value="90">90°</option>
-              <option value="180">180°</option>
-              <option value="270">270°</option>
-            </select>
-          </div>
-          <div class="col-6"><label class="form-label">Scope</label>
-            <input class="form-control" id="opt-scope" placeholder="all or 1,3,5">
-          </div>
-        </div>`;
-    } else if (slug === 'compress'){
-      optionsArea.innerHTML = `
-        <label class="form-label">Quality</label>
-        <select id="opt-quality" class="form-select">
-          <option value="low">Low</option>
-          <option value="medium" selected>Medium</option>
-          <option value="high">High</option>
-        </select>`;
-    } else {
-      optionsArea.innerHTML = '<div class="text-secondary small">No options required.</div>';
-    }
-  }
-  buildOptions(toolSlug);
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const fd = new FormData(form);
-    let options = {};
-    if (toolSlug === 'split'){
-      const s = document.getElementById('opt-start').value;
-      const e2 = document.getElementById('opt-end').value;
-      if (s && e2){ options.ranges = `${s}-${e2}`; }
-    } else if (toolSlug === 'rotate'){
-      options.degrees = document.getElementById('opt-deg').value || 90;
-      const scope = document.getElementById('opt-scope').value.trim();
-      options.scope = scope || 'all';
-    } else if (toolSlug === 'compress'){
-      options.quality = document.getElementById('opt-quality').value || 'medium';
-    }
-    fd.set('options', JSON.stringify(options));
-    try {
-      const res = await fetch('/api/jobs', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok) { alert(data.error || 'Failed'); return; }
-      statusBox.classList.remove('d-none');
-      if (window.neonpdfAddJob) window.neonpdfAddJob(data.job_id);
-      pollJob(data.job_id);
-    } catch (err) { console.error(err); alert('Error'); }
-  });
-
-  async function pollJob(id) {
-    const res = await fetch(`/api/jobs/${id}`);
-    const data = await res.json();
-    statusText.textContent = data.status;
-    statusProg.style.width = `${data.progress || 0}%`;
-    if (data.status === 'done') {
-      results.innerHTML = '';
-      const files = (data.result_manifest && data.result_manifest.files) || [];
-      files.forEach(f => {
-        const li = document.createElement('li');
-        li.innerHTML = `<a class="btn btn-sm btn-outline-neon" href="${f.url}" target="_blank" rel="noopener" download>${f.filename}</a>`;
-        results.appendChild(li);
-      });
-      return;
-    }
-    if (data.status === 'error') {
-      results.innerHTML = `<li class="text-danger">${data.error_message || 'Unknown error'}</li>`;
-      return;
-    }
-    setTimeout(() => pollJob(id), 1000);
-  }
-  results.addEventListener('click', (e) => {
-    const a = e.target.closest('a[href]');
-    if(!a) return;
-    try{
-      const u = new URL(a.getAttribute('href'), window.location.origin);
-      const parts = u.pathname.split('/');
-      const jid = parts[3];
-      if (jid && window.neonpdfRemoveJob) window.neonpdfRemoveJob(jid);
-    } catch {}
-  });
-</script>
-{% endif %}
 {% endblock %}
 

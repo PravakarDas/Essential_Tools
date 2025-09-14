@@ -5,7 +5,7 @@
     {% for t in tools %}
       <div class="col tool-item" data-index="{{ loop.index0 }}" data-title="{{ t.title|lower }}" data-desc="{{ t.desc|lower }}" data-category="{{ t.category }}">
         <div class="card tool-card h-100">
-          <a href="/tool/{{ t.slug }}" class="stretched-link" aria-label="Open {{ t.title }}"></a>
+          <a href="/tools/{{ t.slug }}" class="stretched-link" aria-label="Open {{ t.title }}"></a>
           <div class="card-body">
             <h5 class="card-title">{{ t.title }}</h5>
             <p class="card-text small text-secondary">{{ t.desc }}</p>

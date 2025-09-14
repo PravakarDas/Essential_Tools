@@ -57,3 +57,4 @@
 /* Tool card hover-reveal description */
 .tool-card .card-text{ max-height: 0; opacity: 0; overflow: hidden; transition: max-height .2s ease, opacity .2s ease; }
 .tool-card:hover .card-text{ max-height: 160px; opacity: 1; }
+

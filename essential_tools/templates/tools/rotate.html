@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h1 class="h3 mb-2">Rotate PDF</h1>
+  <p class="text-secondary">Rotate pages 90/180/270.</p>
+
+  <form id="job-form" class="mb-3">
+    <input type="hidden" name="tool" value="rotate">
+    <div class="mb-3">
+      <label class="form-label">PDF file</label>
+      <input class="form-control" type="file" name="files" accept="application/pdf">
+    </div>
+    <div class="row g-2 mb-3">
+      <div class="col-6">
+        <label class="form-label">Degrees</label>
+        <select id="opt-deg" class="form-select">
+          <option value="90">90°</option>
+          <option value="180">180°</option>
+          <option value="270">270°</option>
+        </select>
+      </div>
+      <div class="col-6">
+        <label class="form-label">Scope</label>
+        <input class="form-control" id="opt-scope" placeholder="all or 1,3,5">
+      </div>
+    </div>
+    <button class="btn btn-neon" type="submit">Queue Job</button>
+  </form>
+
+  <div id="job-status" class="d-none">
+    <div class="d-flex align-items-center gap-2">
+      <strong>Status:</strong> <span id="status-text">queued</span>
+      <div class="progress flex-grow-1" style="height: 6px;">
+        <div id="status-progress" class="progress-bar bg-neon" role="progressbar" style="width: 0%"></div>
+      </div>
+    </div>
+    <ul id="results" class="list-unstyled mt-3"></ul>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const form = document.getElementById('job-form');
+  const statusBox = document.getElementById('job-status');
+  const statusText = document.getElementById('status-text');
+  const statusProg = document.getElementById('status-progress');
+  const results = document.getElementById('results');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const degrees = document.getElementById('opt-deg').value || 90;
+    const scope = (document.getElementById('opt-scope').value || '').trim() || 'all';
+    fd.set('options', JSON.stringify({ degrees, scope }));
+    try {
+      const res = await fetch('/api/jobs', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Failed'); return; }
+      statusBox.classList.remove('d-none');
+      if (window.essentialToolsAddJob) window.essentialToolsAddJob(data.job_id);
+      pollJob(data.job_id);
+    } catch (err) { console.error(err); alert('Error'); }
+  });
+
+  async function pollJob(id) {
+    const res = await fetch(`/api/jobs/${id}`);
+    const data = await res.json();
+    statusText.textContent = data.status;
+    statusProg.style.width = `${data.progress || 0}%`;
+    if (data.status === 'done') {
+      results.innerHTML = '';
+      const files = (data.result_manifest && data.result_manifest.files) || [];
+      files.forEach(f => {
+        const li = document.createElement('li');
+        li.innerHTML = `<a class=\"btn btn-sm btn-outline-neon\" href=\"${f.url}\" target=\"_blank\" rel=\"noopener\" download>${f.filename}</a>`;
+        results.appendChild(li);
+      });
+      return;
+    }
+    if (data.status === 'error') {
+      results.innerHTML = `<li class=\"text-danger\">${data.error_message || 'Unknown error'}</li>`;
+      return;
+    }
+    setTimeout(() => pollJob(id), 1000);
+  }
+
+  results.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href]');
+    if(!a) return;
+    try{
+      const u = new URL(a.getAttribute('href'), window.location.origin);
+      const parts = u.pathname.split('/');
+      const jid = parts[3];
+      if (jid && window.essentialToolsRemoveJob) window.essentialToolsRemoveJob(jid);
+    } catch {}
+  });
+</script>
+{% endblock %}
+

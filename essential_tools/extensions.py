@@ -24,7 +24,7 @@ class TaskBackend:
         use_rq = app.config.get("USE_RQ", True) and app.config.get("REDIS_URL")
         if use_rq and redis and Queue:
             rconn = redis.from_url(app.config["REDIS_URL"])  # type: ignore[arg-type]
-            self.queue = Queue("neonpdf", connection=rconn)
+            self.queue = Queue("essential-tools", connection=rconn)
         else:
             # Fallback to threadpool for dev/testing
             self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
@@ -52,5 +52,4 @@ def init_extensions(app: Flask) -> None:
     task_backend.init_app(app)
 
     # Download link signer
-    signer = URLSafeSerializer(app.config["SECRET_KEY"], salt="neonpdf-download")
-
+    signer = URLSafeSerializer(app.config["SECRET_KEY"], salt="essential-tools-download")

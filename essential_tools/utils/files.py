@@ -45,4 +45,3 @@ def clean_workspace(path: str) -> None:
 def temp_pdf_path(workspace: str, name: str) -> str:
     Path(workspace).mkdir(parents=True, exist_ok=True)
     return os.path.join(workspace, name)
-

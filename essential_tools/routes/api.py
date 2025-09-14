@@ -9,7 +9,7 @@ from ..utils.files import save_uploads
 from ..tasks.jobs import dispatch_tool
 
 
-bp = Blueprint("api_jobs", __name__)
+bp = Blueprint("api", __name__)
 
 
 @bp.post("/jobs")
@@ -93,4 +93,4 @@ def download(job_id: str, token: str, filename: str):
 
 def signed_download_url(job_id: str, filename: str) -> str:
     token = signer.dumps({"job_id": job_id, "filename": filename})
-    return url_for("api_jobs.download", job_id=job_id, token=token, filename=filename, _external=False)
+    return url_for("api.download", job_id=job_id, token=token, filename=filename, _external=False)

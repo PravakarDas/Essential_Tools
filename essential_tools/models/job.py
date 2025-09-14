@@ -50,4 +50,3 @@ class Job:
         jobfile = os.path.join(self.workspace_path, "job.json")
         with open(jobfile, "w", encoding="utf-8") as f:
             json.dump(self.to_dict(), f, indent=2)
-

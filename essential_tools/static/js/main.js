@@ -10,7 +10,7 @@
     const btn = document.getElementById('theme-toggle');
     if (btn){
       btn.setAttribute('aria-label', theme.value);
-      btn.textContent = theme.value === 'dark' ? '☀' : '🌑';
+      btn.textContent = theme.value === 'dark' ? '🌙' : '☀️';
     }
   };
   const setPreference = () => { localStorage.setItem(storageKey, theme.value); reflectPreference(); };
@@ -112,11 +112,11 @@
   }
 
   // Job lifecycle: track job IDs and cleanup on unload
-  const JOBS_KEY = 'neonpdf-jobs';
+  const JOBS_KEY = 'essential-tools-jobs';
   function getJobs(){ try { return JSON.parse(sessionStorage.getItem(JOBS_KEY) || '[]'); } catch { return []; } }
   function setJobs(ids){ sessionStorage.setItem(JOBS_KEY, JSON.stringify(ids)); }
-  window.neonpdfAddJob = function(id){ const ids = new Set(getJobs()); ids.add(id); setJobs(Array.from(ids)); }
-  window.neonpdfRemoveJob = function(id){ const ids = new Set(getJobs()); ids.delete(id); setJobs(Array.from(ids)); }
+  window.essentialToolsAddJob = function(id){ const ids = new Set(getJobs()); ids.add(id); setJobs(Array.from(ids)); }
+  window.essentialToolsRemoveJob = function(id){ const ids = new Set(getJobs()); ids.delete(id); setJobs(Array.from(ids)); }
   window.addEventListener('beforeunload', () => {
     const ids = getJobs();
     ids.forEach((id) => {

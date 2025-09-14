@@ -2,8 +2,7 @@ import os
 from flask import Flask
 from .config import Config
 from .extensions import init_extensions
-from .blueprints.main import bp as main_bp
-from .api.jobs import bp as api_jobs_bp
+from .routes import register_blueprints
 
 
 def create_app(test_config: dict | None = None) -> Flask:
@@ -27,9 +26,7 @@ def create_app(test_config: dict | None = None) -> Flask:
     init_extensions(app)
 
     # Blueprints
-    app.register_blueprint(main_bp)
-    app.register_blueprint(api_jobs_bp, url_prefix="/api")
+    register_blueprints(app)
 
 
     return app
-
