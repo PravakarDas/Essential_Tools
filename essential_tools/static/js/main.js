@@ -1,5 +1,4 @@
 (() => {
-  // Theme preference (emoji toggle)
   const storageKey = 'theme-preference';
   const html = document.documentElement;
   const getColorPreference = () => localStorage.getItem(storageKey) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -20,7 +19,6 @@
   if (themeBtn) themeBtn.addEventListener('click', () => { theme.value = (theme.value === 'light') ? 'dark' : 'light'; setPreference(); });
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ({matches:isDark}) => { theme.value = isDark ? 'dark' : 'light'; setPreference(); });
 
-  // Sidebar filtering + live search (index page)
   const searchHeader = document.getElementById('tool-search');
   const searchSidebar = document.getElementById('sidebar-search');
   const grid = document.getElementById('tools-grid');
@@ -72,10 +70,10 @@
     });
   }
 
-  // Sorting via checkboxes in sidebar
+  
   if (grid && items.length){
     const sortChecks = Array.from(document.querySelectorAll('.sort-check'));
-    let currentSort = null; // 'az' | 'za' | 'new' | null
+    let currentSort = null;
     const compareAZ = (a,b) => a.localeCompare(b, undefined, {sensitivity:'base'});
     const sortGrid = (mode) => {
       if (!mode){
@@ -93,7 +91,7 @@
         if (mode === 'new'){
           const ia = parseInt(a.dataset.index||'0',10);
           const ib = parseInt(b.dataset.index||'0',10);
-          return ib - ia; // newest first (higher index)
+          return ib - ia; 
         }
         return 0;
       });
@@ -111,7 +109,6 @@
     }));
   }
 
-  // Job lifecycle: track job IDs and cleanup on unload
   const JOBS_KEY = 'essential-tools-jobs';
   function getJobs(){ try { return JSON.parse(sessionStorage.getItem(JOBS_KEY) || '[]'); } catch { return []; } }
   function setJobs(ids){ sessionStorage.setItem(JOBS_KEY, JSON.stringify(ids)); }

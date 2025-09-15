@@ -6,10 +6,7 @@ from pypdf import PdfReader, PdfWriter
 
 
 def process(job, upload_paths: List[str]) -> Dict[str, Any]:
-    """
-    Server-side merge implementation (not used by merge UI which is client-side),
-    kept for parity and API compatibility.
-    """
+    
     if len(upload_paths) < 2:
         raise ValueError("Provide at least two PDFs to merge")
     writer = PdfWriter()

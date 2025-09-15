@@ -15,10 +15,8 @@ def _parse_ranges(expr: str, total_pages: int):
             start = int(a) if a.isdigit() else 1
             end = int(b) if b.isdigit() else total_pages
         else:
-            # single page like "7"
             s = p.strip()
             if not s.isdigit():
-                # skip invalid token
                 continue
             start = end = int(s)
         start = max(1, start)
@@ -31,7 +29,7 @@ def process(job, upload_paths: List[str]) -> Dict[str, Any]:
     if len(upload_paths) != 1:
         raise ValueError("Upload exactly one PDF to split")
     reader = PdfReader(upload_paths[0])
-    ranges = job.options.get("ranges") or "1-end"  # e.g., "1-3,7,10-end"
+    ranges = job.options.get("ranges") or "1-end"
     outputs: list[str] = []
     ranges_list = list(_parse_ranges(ranges, len(reader.pages)))
     if not ranges_list:

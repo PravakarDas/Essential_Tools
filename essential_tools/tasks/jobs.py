@@ -15,7 +15,6 @@ def _update(job: Job, **fields):
 
 
 def dispatch_tool(job_dict: Dict[str, Any], upload_paths: List[str]):
-    # Executed in background (RQ or thread). Avoid Flask app context dependencies.
     job = Job(**job_dict)
     try:
         _update(job, status="running", progress=5)
@@ -23,8 +22,6 @@ def dispatch_tool(job_dict: Dict[str, Any], upload_paths: List[str]):
         if not tool or not tool.processor:
             raise NotImplementedError(f"Tool not implemented: {job.tool}")
         result = tool.processor(job, upload_paths)
-
-        # Build result manifest and mark done
         files = result.get("files", [])
         manifest = []
         for fn in files:
@@ -39,11 +36,10 @@ def dispatch_tool(job_dict: Dict[str, Any], upload_paths: List[str]):
             finished_at=(os.path.getmtime(files[0]) if files else None),
             result_manifest={"files": manifest},
         )
-    except Exception as e:  # pragma: no cover - background context
+    except Exception as e:  
         _update(job, status="error", error_message=str(e))
 
 
 def _parse_ranges(expr: str, total_pages: int):
-    # Kept for backward-compat imports; logic moved into models.tools.split
     from ..models.tools.split import _parse_ranges as _ranges
     yield from _ranges(expr, total_pages)
