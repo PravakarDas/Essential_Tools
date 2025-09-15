@@ -9,11 +9,18 @@ def _parse_ranges(expr: str, total_pages: int):
     parts = [p.strip() for p in expr.split(",") if p.strip()]
     for p in parts:
         if "-" in p:
-            a, b = p.split("-", 1)
+            a_raw, b_raw = p.split("-", 1)
+            a = a_raw.strip()
+            b = b_raw.strip()
             start = int(a) if a.isdigit() else 1
             end = int(b) if b.isdigit() else total_pages
         else:
-            start = end = int(p)
+            # single page like "7"
+            s = p.strip()
+            if not s.isdigit():
+                # skip invalid token
+                continue
+            start = end = int(s)
         start = max(1, start)
         end = min(total_pages, end)
         if start <= end:
@@ -26,11 +33,18 @@ def process(job, upload_paths: List[str]) -> Dict[str, Any]:
     reader = PdfReader(upload_paths[0])
     ranges = job.options.get("ranges") or "1-end"  # e.g., "1-3,7,10-end"
     outputs: list[str] = []
-    for idx, (start, end) in enumerate(_parse_ranges(ranges, len(reader.pages)), start=1):
+    ranges_list = list(_parse_ranges(ranges, len(reader.pages)))
+    if not ranges_list:
+        raise ValueError("Invalid ranges")
+    multi = len(ranges_list) > 1
+    for idx, (start, end) in enumerate(ranges_list, start=1):
         writer = PdfWriter()
         for i in range(start - 1, end):
             writer.add_page(reader.pages[i])
-        out_name = f"{job.id}_part{idx}.pdf"
+        if multi:
+            out_name = f"splited_part{idx}.pdf"
+        else:
+            out_name = "splited.pdf"
         out_path = os.path.join(job.workspace_path, out_name)
         with open(out_path, "wb") as f:
             writer.write(f)

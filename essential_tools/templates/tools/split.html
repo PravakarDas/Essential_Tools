@@ -7,15 +7,18 @@
     <input type="hidden" name="tool" value="split">
     <div class="mb-3">
       <label class="form-label">PDF file</label>
-      <input class="form-control" type="file" name="files" accept="application/pdf">
+      <input class="form-control" type="file" name="files" accept="application/pdf" required>
     </div>
     <div class="row g-2 mb-3">
       <div class="col-12">
         <label class="form-label">Ranges</label>
-        <input class="form-control" id="opt-ranges" placeholder="e.g., 1-3,7,10-end">
+        <input class="form-control" id="opt-ranges" placeholder="e.g., 1-3,7,10-end" required>
       </div>
     </div>
-    <button class="btn btn-neon" type="submit">Queue Job</button>
+    <div class="d-flex gap-2 align-items-center">
+      <button id="split-go" class="btn btn-neon" type="submit">SPLIT</button>
+      <a id="split-download-main" class="btn btn-sm btn-outline-neon disabled" role="button" aria-disabled="true">Download</a>
+    </div>
   </form>
 
   <div id="job-status" class="d-none">
@@ -36,12 +39,19 @@
   const statusText = document.getElementById('status-text');
   const statusProg = document.getElementById('status-progress');
   const results = document.getElementById('results');
+  const goBtn = document.getElementById('split-go');
+  const dlMain = document.getElementById('split-download-main');
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
     const ranges = document.getElementById('opt-ranges').value.trim();
     fd.set('options', JSON.stringify({ ranges: ranges || '1-end' }));
+    // Reset main download button when starting a new job
+    dlMain.classList.add('disabled');
+    dlMain.setAttribute('aria-disabled', 'true');
+    dlMain.removeAttribute('href');
+    dlMain.removeAttribute('download');
     try {
       const res = await fetch('/api/jobs', { method: 'POST', body: fd });
       const data = await res.json();
@@ -58,13 +68,29 @@
     statusText.textContent = data.status;
     statusProg.style.width = `${data.progress || 0}%`;
     if (data.status === 'done') {
-      results.innerHTML = '';
       const files = (data.result_manifest && data.result_manifest.files) || [];
-      files.forEach(f => {
-        const li = document.createElement('li');
-        li.innerHTML = `<a class=\"btn btn-sm btn-outline-neon\" href=\"${f.url}\" target=\"_blank\" rel=\"noopener\" download>${f.filename}</a>`;
-        results.appendChild(li);
-      });
+      results.innerHTML = '';
+      if (files.length > 1) {
+        results.classList.remove('d-none');
+        files.forEach((f, i) => {
+          const li = document.createElement('li');
+          li.innerHTML = `<a class=\"btn btn-sm btn-outline-neon\" role=\"button\" href=\"${f.url}\" download>Download ${f.filename}</a>`;
+          results.appendChild(li);
+        });
+      } else {
+        results.classList.add('d-none');
+      }
+      // Enable top Download button only for single output
+      dlMain.classList.add('disabled');
+      dlMain.setAttribute('aria-disabled', 'true');
+      dlMain.removeAttribute('href');
+      dlMain.removeAttribute('download');
+      if (files.length === 1 && files[0].url){
+        dlMain.href = files[0].url;
+        dlMain.download = files[0].filename || 'split.pdf';
+        dlMain.classList.remove('disabled');
+        dlMain.removeAttribute('aria-disabled');
+      }
       return;
     }
     if (data.status === 'error') {
@@ -86,4 +112,3 @@
   });
 </script>
 {% endblock %}
-

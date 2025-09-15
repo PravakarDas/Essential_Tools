@@ -4,7 +4,8 @@ import json
 import os
 from flask import Blueprint, current_app, request, jsonify, url_for, send_from_directory, abort
 from ..models.job import Job
-from ..extensions import task_backend, signer
+from ..extensions import task_backend
+from .. import extensions as _ext
 from ..utils.files import save_uploads
 from ..tasks.jobs import dispatch_tool
 
@@ -47,7 +48,7 @@ def get_job(job_id: str):
         return jsonify({"error": "Not found"}), 404
     data = job.to_dict()
     # Enrich result manifest with signed URLs at request time
-    if signer and data.get("result_manifest") and data["result_manifest"].get("files"):
+    if _ext.signer and data.get("result_manifest") and data["result_manifest"].get("files"):
         files = data["result_manifest"]["files"]
         for f in files:
             fname = f.get("filename")
@@ -79,10 +80,10 @@ def delete_job_post(job_id: str):
 
 @bp.get("/download/<job_id>/<token>/<filename>")
 def download(job_id: str, token: str, filename: str):
-    if not signer:
+    if not _ext.signer:
         abort(403)
     try:
-        data = signer.loads(token)
+        data = _ext.signer.loads(token)
         if not (isinstance(data, dict) and data.get("job_id") == job_id and data.get("filename") == filename):
             abort(403)
     except Exception:
@@ -92,5 +93,5 @@ def download(job_id: str, token: str, filename: str):
 
 
 def signed_download_url(job_id: str, filename: str) -> str:
-    token = signer.dumps({"job_id": job_id, "filename": filename})
+    token = _ext.signer.dumps({"job_id": job_id, "filename": filename})
     return url_for("api.download", job_id=job_id, token=token, filename=filename, _external=False)
