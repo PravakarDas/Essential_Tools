@@ -17,7 +17,10 @@
         <option value="high">High</option>
       </select>
     </div>
-    <button class="btn btn-neon" type="submit">Queue Job</button>
+    <div class="d-flex gap-2 align-items-center">
+      <button id="compress-go" class="btn btn-neon" type="submit">Queue Job</button>
+      <a id="compress-download-main" class="btn btn-sm btn-outline-neon disabled" role="button" aria-disabled="true">Download</a>
+    </div>
   </form>
 
   <div id="job-status" class="d-none">
@@ -38,11 +41,18 @@
   const statusText = document.getElementById('status-text');
   const statusProg = document.getElementById('status-progress');
   const results = document.getElementById('results');
+  const goBtn = document.getElementById('compress-go');
+  const dlMain = document.getElementById('compress-download-main');
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
     fd.set('options', JSON.stringify({ quality: document.getElementById('opt-quality').value || 'medium' }));
+    // Reset main download button when starting a new job
+    dlMain.classList.add('disabled');
+    dlMain.setAttribute('aria-disabled', 'true');
+    dlMain.removeAttribute('href');
+    dlMain.removeAttribute('download');
     try {
       const res = await fetch('/api/jobs', { method: 'POST', body: fd });
       const data = await res.json();
@@ -59,16 +69,20 @@
     statusText.textContent = data.status;
     statusProg.style.width = `${data.progress || 0}%`;
     if (data.status === 'done') {
-      results.innerHTML = '';
       const files = (data.result_manifest && data.result_manifest.files) || [];
-      files.forEach(f => {
-        const li = document.createElement('li');
-        li.innerHTML = `<a class=\"btn btn-sm btn-outline-neon\" href=\"${f.url}\" target=\"_blank\" rel=\"noopener\" download>${f.filename}</a>`;
-        results.appendChild(li);
-      });
+      // Prefer the top Download button and hide the bottom file list
+      results.innerHTML = '';
+      results.classList.add('d-none');
+      if (files.length >= 1 && files[0].url){
+        dlMain.href = files[0].url;
+        dlMain.download = 'Compress.pdf';
+        dlMain.classList.remove('disabled');
+        dlMain.removeAttribute('aria-disabled');
+      }
       return;
     }
     if (data.status === 'error') {
+      results.classList.remove('d-none');
       results.innerHTML = `<li class=\"text-danger\">${data.error_message || 'Unknown error'}</li>`;
       return;
     }
@@ -87,4 +101,3 @@
   });
 </script>
 {% endblock %}
-

@@ -32,6 +32,7 @@ def all_tools() -> List[Tool]:
 from . import merge as _merge  # noqa: E402
 from . import split as _split  # noqa: E402
 from . import rotate as _rotate  # noqa: E402
+from . import compress as _compress  # noqa: E402
 
 register(
     Tool(
@@ -64,7 +65,15 @@ register(
 )
 
 # Additional tools (UI-only for now)
-register(Tool(slug="compress", title="Compress PDF", desc="Reduce file size with presets.", category="optimize"))
+register(
+    Tool(
+        slug="compress",
+        title="Compress PDF",
+        desc="Reduce file size with presets.",
+        category="optimize",
+        processor=_compress.process,
+    )
+)
 register(Tool(slug="pdf-to-word", title="PDF → Word", desc="Convert PDF to DOCX.", category="convert"))
 register(Tool(slug="pdf-to-pptx", title="PDF → PowerPoint", desc="Pages to slides.", category="convert"))
 register(Tool(slug="word-to-pdf", title="Word → PDF", desc="DOC/DOCX to PDF.", category="convert"))
