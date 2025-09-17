@@ -16,3 +16,4 @@ rq
 celery
 sentry-sdk
 python-dotenv
+poppler-utils
