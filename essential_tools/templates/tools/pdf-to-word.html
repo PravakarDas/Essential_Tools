@@ -1,25 +1,17 @@
 {% extends 'base.html' %}
 {% block content %}
-  <h1 class="h3 mb-2">Compress PDF</h1>
-  <p class="text-secondary">Reduce file size with presets.</p>
+  <h1 class="h3 mb-2">PDF → Word</h1>
+  <p class="text-secondary">Convert a PDF into an editable DOCX.</p>
 
   <form id="job-form" class="mb-3">
-    <input type="hidden" name="tool" value="compress">
+    <input type="hidden" name="tool" value="pdf-to-word">
     <div class="mb-3">
       <label class="form-label">PDF file</label>
-      <input class="form-control" type="file" name="files" accept="application/pdf">
-    </div>
-    <div class="mb-3">
-      <label class="form-label">Quality</label>
-      <select id="opt-quality" class="form-select">
-        <option value="low">Low</option>
-        <option value="medium" selected>Medium</option>
-        <option value="high">High</option>
-      </select>
+      <input class="form-control" type="file" name="files" accept="application/pdf" required>
     </div>
     <div class="d-flex gap-2 align-items-center">
-      <button id="compress-go" class="btn btn-neon" type="submit">Compress</button>
-      <a id="compress-download-main" class="btn btn-sm btn-outline-neon disabled" role="button" aria-disabled="true">Download</a>
+      <button id="pdf2word-go" class="btn btn-neon" type="submit">Convert</button>
+      <a id="pdf2word-download-main" class="btn btn-sm btn-outline-neon disabled" role="button" aria-disabled="true">Download</a>
     </div>
   </form>
 
@@ -41,13 +33,13 @@
   const statusText = document.getElementById('status-text');
   const statusProg = document.getElementById('status-progress');
   const results = document.getElementById('results');
-  const goBtn = document.getElementById('compress-go');
-  const dlMain = document.getElementById('compress-download-main');
+  const goBtn = document.getElementById('pdf2word-go');
+  const dlMain = document.getElementById('pdf2word-download-main');
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
-    fd.set('options', JSON.stringify({ quality: document.getElementById('opt-quality').value || 'medium' }));
+    fd.set('options', JSON.stringify({}));
     // Reset main download button when starting a new job
     dlMain.classList.add('disabled');
     dlMain.setAttribute('aria-disabled', 'true');
@@ -75,7 +67,7 @@
       results.classList.add('d-none');
       if (files.length >= 1 && files[0].url){
         dlMain.href = files[0].url;
-        dlMain.download = 'Compress.pdf';
+        dlMain.download = 'Word.docx';
         dlMain.classList.remove('disabled');
         dlMain.removeAttribute('aria-disabled');
       }
@@ -101,3 +93,4 @@
   });
 </script>
 {% endblock %}
+

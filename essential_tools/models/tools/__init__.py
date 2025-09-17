@@ -33,6 +33,7 @@ from . import merge as _merge  # noqa: E402
 from . import split as _split  # noqa: E402
 from . import rotate as _rotate  # noqa: E402
 from . import compress as _compress  # noqa: E402
+from . import pdf_to_word as _pdf_to_word  # noqa: E402
 
 register(
     Tool(
@@ -86,3 +87,14 @@ register(Tool(slug="watermark", title="Watermark", desc="Text or image watermark
 register(Tool(slug="html-to-pdf", title="HTML → PDF", desc="URL or HTML to PDF.", category="convert"))
 register(Tool(slug="unlock", title="Unlock PDF", desc="Remove password (with key).", category="secure"))
 register(Tool(slug="protect", title="Protect PDF", desc="Add password & permissions.", category="secure"))
+
+# Override UI-only registration for pdf-to-word with real processor
+register(
+    Tool(
+        slug="pdf-to-word",
+        title="PDF → Word",
+        desc="Convert PDF to DOCX.",
+        category="convert",
+        processor=_pdf_to_word.process,
+    )
+)
