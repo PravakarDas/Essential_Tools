@@ -5,12 +5,7 @@ import os
 from html.parser import HTMLParser
 from typing import Dict, List, Tuple
 
-try:  # Optional dependency (needs GTK on Windows)
-    from weasyprint import HTML, CSS  # type: ignore
-    _WEASY_AVAILABLE = True
-except Exception:  # pragma: no cover
-    HTML = CSS = None  # type: ignore
-    _WEASY_AVAILABLE = False
+_WEASY_AVAILABLE = None  # lazy-checked at runtime
 
 
 PAGE_SIZES_CSS = {
@@ -162,10 +157,20 @@ def process(job, upload_paths: List[str]) -> Dict[str, List[str]]:
     out_path = os.path.join(job.workspace_path, out_name)
     rendered = False
 
-    if _WEASY_AVAILABLE:
+    global _WEASY_AVAILABLE
+    if _WEASY_AVAILABLE is None:
+        # Only attempt to import WeasyPrint when first used, to avoid startup warnings
         try:
+            from weasyprint import HTML as _WHTML, CSS as _WCSS  # type: ignore
+            _WEASY_AVAILABLE = (_WHTML, _WCSS)
+        except Exception:
+            _WEASY_AVAILABLE = False
+
+    if _WEASY_AVAILABLE not in (False, None):
+        try:
+            _WHTML, _WCSS = _WEASY_AVAILABLE  # type: ignore[misc]
             css = _build_styles(page_size)
-            HTML(string=body, base_url=os.getcwd()).write_pdf(out_path, stylesheets=[CSS(string=css)])
+            _WHTML(string=body, base_url=os.getcwd()).write_pdf(out_path, stylesheets=[_WCSS(string=css)])
             rendered = True
         except Exception:
             rendered = False

@@ -16,4 +16,4 @@ def index():
     ]
     if q:
         tools = [t for t in tools if q in t["title"].lower() or q in t["desc"].lower()]
-    return render_template("index.html", tools=tools)
+    return render_template("index.html", tools=tools, show_sidebar=True)
