@@ -35,6 +35,8 @@ from . import rotate as _rotate  # noqa: E402
 from . import compress as _compress  # noqa: E402
 from . import pdf_to_word as _pdf_to_word  # noqa: E402
 from . import pdf_to_pptx as _pdf_to_pptx  # noqa: E402
+from . import word_to_pdf as _word_to_pdf  # noqa: E402
+from . import pptx_to_pdf as _pptx_to_pdf  # noqa: E402
 
 register(
     Tool(
@@ -98,8 +100,24 @@ register(
 )
 
 # UI-only placeholders (not implemented yet)
-register(Tool(slug="word-to-pdf", title="Word -> PDF", desc="DOC/DOCX to PDF.", category="convert"))
-register(Tool(slug="pptx-to-pdf", title="PowerPoint -> PDF", desc="PPT/PPTX to PDF.", category="convert"))
+register(
+    Tool(
+        slug="word-to-pdf",
+        title="Word -> PDF",
+        desc="DOC/DOCX to PDF.",
+        category="convert",
+        processor=_word_to_pdf.process,
+    )
+)
+register(
+    Tool(
+        slug="pptx-to-pdf",
+        title="PowerPoint -> PDF",
+        desc="PPT/PPTX to PDF.",
+        category="convert",
+        processor=_pptx_to_pdf.process,
+    )
+)
 register(Tool(slug="annotate", title="Edit/Annotate PDF", desc="Add text, highlights, shapes.", category="edit"))
 register(Tool(slug="pdf-to-images", title="PDF -> Images", desc="Export pages as JPG/PNG.", category="convert"))
 register(Tool(slug="images-to-pdf", title="Images -> PDF", desc="One page per image.", category="convert"))
@@ -108,4 +126,3 @@ register(Tool(slug="watermark", title="Watermark", desc="Text or image watermark
 register(Tool(slug="html-to-pdf", title="HTML -> PDF", desc="URL or HTML to PDF.", category="convert"))
 register(Tool(slug="unlock", title="Unlock PDF", desc="Remove password (with key).", category="secure"))
 register(Tool(slug="protect", title="Protect PDF", desc="Add password & permissions.", category="secure"))
-
