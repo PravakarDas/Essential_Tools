@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h1 class="h3 mb-2">Sign PDF</h1>
+  <p class="text-secondary">Upload a PDF and place your signature.</p>
+
+  <form id="job-form" class="mb-3" novalidate>
+    <div class="mb-3">
+      <label class="form-label">PDF file</label>
+      <input id="sign-pdf" class="form-control" type="file" accept="application/pdf" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Signature image (PNG recommended)</label>
+      <input id="sign-image" class="form-control" type="file" accept="image/png,image/jpeg,image/bmp" required>
+      <div class="form-check mt-2">
+        <input id="remove-bg" class="form-check-input" type="checkbox">
+        <label class="form-check-label" for="remove-bg">Clear Sign / Background Removed</label>
+      </div>
+    </div>
+    <div class="row g-2 mb-3">
+      <div class="col-12 col-md-6">
+        <label class="form-label">Placement</label>
+        <select id="placement" class="form-select">
+          <option value="all">Every page (bottom)</option>
+          <option value="last">Last page only</option>
+          <option value="first">First page only</option>
+        </select>
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Alignment</label>
+        <select id="align" class="form-select">
+          <option value="left">Left</option>
+          <option value="center" selected>Center</option>
+          <option value="right">Right</option>
+        </select>
+      </div>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+      <button id="sign-go" class="btn btn-neon" type="submit">Convert</button>
+      <a id="sign-download" class="btn btn-sm btn-outline-neon disabled" role="button" aria-disabled="true">Download</a>
+    </div>
+  </form>
+
+  <div id="job-status" class="d-none">
+    <div class="d-flex align-items-center gap-2">
+      <strong>Status:</strong> <span id="status-text">queued</span>
+      <div class="progress flex-grow-1" style="height: 6px;">
+        <div id="status-progress" class="progress-bar bg-neon" role="progressbar" style="width: 0%"></div>
+      </div>
+    </div>
+    <ul id="results" class="list-unstyled mt-3"></ul>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const form = document.getElementById('job-form');
+  const pdfInput = document.getElementById('sign-pdf');
+  const imgInput = document.getElementById('sign-image');
+  const statusBox = document.getElementById('job-status');
+  const statusText = document.getElementById('status-text');
+  const statusProg = document.getElementById('status-progress');
+  const results = document.getElementById('results');
+  const dlMain = document.getElementById('sign-download');
+
+  let currentJobId = null;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!pdfInput.files.length || !imgInput.files.length){
+      alert('Select both PDF and signature image');
+      return;
+    }
+    const fd = new FormData();
+    fd.append('tool', 'sign');
+    fd.append('files', pdfInput.files[0]);
+    fd.append('files', imgInput.files[0]);
+    const opts = {
+      remove_bg: document.getElementById('remove-bg').checked,
+      placement: document.getElementById('placement').value,
+      align: document.getElementById('align').value,
+    };
+    fd.append('options', JSON.stringify(opts));
+    dlMain.classList.add('disabled');
+    dlMain.setAttribute('aria-disabled', 'true');
+    dlMain.removeAttribute('href');
+    dlMain.removeAttribute('download');
+    try {
+      const res = await fetch('/api/jobs', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Failed'); return; }
+      statusBox.classList.remove('d-none');
+      currentJobId = data.job_id;
+      if (window.essentialToolsAddJob) window.essentialToolsAddJob(currentJobId);
+      pollJob(currentJobId);
+    } catch (err) { console.error(err); alert('Error'); }
+  });
+
+  async function pollJob(id) {
+    const res = await fetch(`/api/jobs/${id}`);
+    const data = await res.json();
+    statusText.textContent = data.status;
+    statusProg.style.width = `${data.progress || 0}%`;
+    if (data.status === 'done') {
+      const files = (data.result_manifest && data.result_manifest.files) || [];
+      results.innerHTML = '';
+      results.classList.add('d-none');
+      if (files.length >= 1 && files[0].url){
+        dlMain.href = files[0].url;
+        dlMain.download = 'Signed.pdf';
+        dlMain.classList.remove('disabled');
+        dlMain.removeAttribute('aria-disabled');
+      }
+      if (currentJobId && window.essentialToolsRemoveJob) window.essentialToolsRemoveJob(currentJobId);
+      currentJobId = null;
+      return;
+    }
+    if (data.status === 'error') {
+      results.classList.remove('d-none');
+      results.innerHTML = `<li class=\"text-danger\">${data.error_message || 'Unknown error'}</li>`;
+      if (currentJobId && window.essentialToolsRemoveJob) window.essentialToolsRemoveJob(currentJobId);
+      currentJobId = null;
+      return;
+    }
+    setTimeout(() => pollJob(id), 1000);
+  }
+</script>
+{% endblock %}

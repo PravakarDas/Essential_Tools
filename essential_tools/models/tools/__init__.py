@@ -39,6 +39,8 @@ from . import word_to_pdf as _word_to_pdf  # noqa: E402
 from . import pptx_to_pdf as _pptx_to_pdf  # noqa: E402
 from . import pdf_to_images as _pdf_to_images  # noqa: E402
 from . import images_to_pdf as _images_to_pdf  # noqa: E402
+from . import sign as _sign  # noqa: E402
+from . import watermark as _watermark  # noqa: E402
 
 register(
     Tool(
@@ -138,8 +140,24 @@ register(
         processor=_images_to_pdf.process,
     )
 )
-register(Tool(slug="sign", title="Sign PDF", desc="Draw/type/upload signature.", category="secure"))
-register(Tool(slug="watermark", title="Watermark", desc="Text or image watermark.", category="edit"))
+register(
+    Tool(
+        slug="sign",
+        title="Sign PDF",
+        desc="Place signature image onto PDF pages.",
+        category="secure",
+        processor=_sign.process,
+    )
+)
+register(
+    Tool(
+        slug="watermark",
+        title="Watermark",
+        desc="Add image or text watermark.",
+        category="edit",
+        processor=_watermark.process,
+    )
+)
 register(Tool(slug="html-to-pdf", title="HTML -> PDF", desc="URL or HTML to PDF.", category="convert"))
 register(Tool(slug="unlock", title="Unlock PDF", desc="Remove password (with key).", category="secure"))
 register(Tool(slug="protect", title="Protect PDF", desc="Add password & permissions.", category="secure"))

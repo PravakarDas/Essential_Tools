@@ -22,6 +22,8 @@ def _convert_with_pillow(paths: List[str], out_path: str) -> None:
         raise ValueError("No images")
     first, rest = images[0], images[1:]
     first.save(out_path, save_all=True, append_images=rest, format="PDF")
+    for img in images:
+        img.close()
 
 
 def process(job, upload_paths: List[str]) -> Dict[str, Any]:
@@ -43,4 +45,3 @@ def process(job, upload_paths: List[str]) -> Dict[str, Any]:
     # Fallback: Pillow
     _convert_with_pillow(images, out_path)
     return {"files": [out_path]}
-
