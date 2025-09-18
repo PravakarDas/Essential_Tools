@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
-import sys
 from typing import Any, Dict, List
 
 
@@ -29,20 +28,67 @@ def _convert_with_libreoffice(inp: str, out_dir: str) -> str:
     return os.path.join(out_dir, base)
 
 
-def _convert_with_powerpoint(inp: str, out_path: str) -> None:
-    # Windows-only PowerPoint automation
-    import comtypes.client  # type: ignore
-    powerpoint = comtypes.client.CreateObject("Powerpoint.Application")
-    powerpoint.Visible = 1
-    try:
-        presentation = powerpoint.Presentations.Open(inp, WithWindow=False)
-        try:
-            # 32 is ppFixedFormatTypePDF
-            presentation.ExportAsFixedFormat(out_path, 2)  # 2=ppFixedFormatTypePDF
-        finally:
-            presentation.Close()
-    finally:
-        powerpoint.Quit()
+EMU_PER_PT = 12700.0
+
+
+def _pptx_to_pdf_pure(src: str, out_path: str) -> None:
+    # Render PPTX slides into a PDF using python-pptx (read) + PyMuPDF (draw)
+    from pptx import Presentation  # type: ignore
+    import fitz  # type: ignore
+
+    prs = Presentation(src)
+    slide_w_pt = float(prs.slide_width) / EMU_PER_PT
+    slide_h_pt = float(prs.slide_height) / EMU_PER_PT
+    doc = fitz.open()
+
+    for slide in prs.slides:
+        page = doc.new_page(width=slide_w_pt, height=slide_h_pt)
+        for shape in slide.shapes:
+            try:
+                left = float(getattr(shape, "left", 0)) / EMU_PER_PT
+                top = float(getattr(shape, "top", 0)) / EMU_PER_PT
+                width = float(getattr(shape, "width", 0)) / EMU_PER_PT
+                height = float(getattr(shape, "height", 0)) / EMU_PER_PT
+            except Exception:
+                left = top = 0.0
+                width = height = 0.0
+
+            rect = fitz.Rect(left, top, left + max(width, 0.1), top + max(height, 0.1))
+
+            # Pictures
+            if hasattr(shape, "image"):
+                try:
+                    blob = shape.image.blob  # type: ignore[attr-defined]
+                    page.insert_image(rect, stream=blob)
+                    continue
+                except Exception:
+                    pass
+
+            # Text
+            if getattr(shape, "has_text_frame", False):
+                try:
+                    tf = shape.text_frame
+                    # Gather plain text with line breaks
+                    lines: list[str] = []
+                    for p in tf.paragraphs:
+                        runs = [run.text or "" for run in getattr(p, "runs", [])]
+                        lines.append("".join(runs))
+                    text = "\n".join(lines)
+                    # Use insert_textbox with safe args; fall back to insert_text if it fails
+                    try:
+                        page.insert_textbox(rect, text, fontname="helv", fontsize=12, align=0)
+                    except Exception:
+                        # Simple top-left text draw as a fallback
+                        y = rect.y0
+                        lh = 14
+                        for ln in text.splitlines() or [text]:
+                            page.insert_text((rect.x0, y), ln, fontname="helv", fontsize=12)
+                            y += lh
+                except Exception:
+                    pass
+
+    doc.save(out_path)
+    doc.close()
 
 
 def process(job, upload_paths: List[str]) -> Dict[str, Any]:
@@ -52,7 +98,9 @@ def process(job, upload_paths: List[str]) -> Dict[str, Any]:
     out_name = f"{job.id}.pdf"
     out_path = os.path.join(job.workspace_path, out_name)
 
-    # Try LibreOffice first (cross-platform)
+    ext = os.path.splitext(src)[1].lower()
+
+    # Try LibreOffice first when available (best fidelity for PPT/PPTX)
     try:
         if _libreoffice_exe():
             produced = _convert_with_libreoffice(src, job.workspace_path)
@@ -62,15 +110,12 @@ def process(job, upload_paths: List[str]) -> Dict[str, Any]:
     except Exception:
         pass
 
-    # On Windows, try PowerPoint automation via COM
-    if sys.platform.startswith("win"):
-        try:
-            _convert_with_powerpoint(src, out_path)
-            return {"files": [out_path]}
-        except Exception:
-            pass
+    # Pure-Python fallback for PPTX using installed libraries (python-pptx + PyMuPDF)
+    if ext == ".pptx":
+        _pptx_to_pdf_pure(src, out_path)
+        return {"files": [out_path]}
 
+    # PPT (legacy) requires LibreOffice
     raise RuntimeError(
-        "Conversion requires LibreOffice (soffice) on PATH or Microsoft PowerPoint (Windows)."
+        "This conversion supports PPTX without extra libraries. For PPT, please install LibreOffice or save as PPTX."
     )
-
