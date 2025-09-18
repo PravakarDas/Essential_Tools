@@ -1,42 +1,46 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block content %}
-  <h1 class="h3 mb-3">Merge PDF</h1>
-  <p class="text-secondary">Combine multiple PDFs into one.</p>
-
-  <div class="mb-3">
-    <label class="form-label">Upload PDFs</label>
-    <input id="merge-files" class="form-control" type="file" accept="application/pdf" multiple>
-    <div class="form-text">Select at least two PDFs to merge. Files never leave your browser.</div>
-  </div>
-
-  <button id="adv-toggle" class="btn btn-sm btn-outline-neon mb-3" type="button" aria-expanded="false">Advanced Options</button>
-  <div id="adv-options" class="card card-body mb-3" style="display:none;">
-    <div class="mb-3">
-      <label class="form-label">Reorder (drag to arrange)</label>
-      <ul id="merge-list" class="list-group small"></ul>
+  <div class="surface surface--panel">
+    <div class="panel-header">
+      <h1>Merge PDF</h1>
+      <p>Combine multiple PDFs, reorder pages, and add an optional cover before exporting.</p>
     </div>
-    <div class="row g-2">
-      <div class="col-12 col-md-6">
-        <label class="form-label">Page size</label>
-        <select id="page-size" class="form-select">
-          <option value="keep" selected>Keep original</option>
-          <option value="a4p">A4 Portrait</option>
-          <option value="a4l">A4 Landscape</option>
-          <option value="letterp">Letter Portrait</option>
-          <option value="letterl">Letter Landscape</option>
-        </select>
+
+    <div class="mb-4">
+      <label class="form-label">Upload PDFs</label>
+      <input id="merge-files" class="form-control" type="file" accept="application/pdf" multiple>
+      <div class="form-text">Select at least two PDFs to merge. Files never leave your browser.</div>
+    </div>
+
+    <button id="adv-toggle" class="chip chip--ghost" type="button" aria-expanded="false">Advanced options</button>
+    <div id="adv-options" class="glass-subpanel mt-3" style="display:none;">
+      <div class="mb-3">
+        <label class="form-label">Reorder (drag to arrange)</label>
+        <ul id="merge-list" class="list-group small"></ul>
       </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">Front page (PDF or image)</label>
-        <input id="front-file" class="form-control" type="file" accept="application/pdf,image/*">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Page size</label>
+          <select id="page-size" class="form-select">
+            <option value="keep" selected>Keep original</option>
+            <option value="a4p">A4 Portrait</option>
+            <option value="a4l">A4 Landscape</option>
+            <option value="letterp">Letter Portrait</option>
+            <option value="letterl">Letter Landscape</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Front page (PDF or image)</label>
+          <input id="front-file" class="form-control" type="file" accept="application/pdf,image/*">
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="d-flex gap-2 align-items-center mb-2">
-    <button id="merge-go" class="btn btn-neon" disabled>MERGE</button>
-    <a id="merge-download" class="btn btn-sm btn-outline-neon disabled" role="button" aria-disabled="true">Download</a>
-    <div id="merge-status" class="text-secondary small"></div>
+    <div class="d-flex gap-3 align-items-center mt-4 flex-wrap">
+      <button id="merge-go" class="btn btn-neon" disabled>Merge</button>
+      <a id="merge-download" class="btn btn-outline-neon disabled" role="button" aria-disabled="true">Download</a>
+      <div id="merge-status" class="text-secondary small"></div>
+    </div>
   </div>
 {% endblock %}
 
@@ -85,7 +89,7 @@
         li.dataset.index = String(idx);
         const grip = document.createElement('span');
         grip.className = 'text-secondary';
-        grip.textContent = '≡';
+        grip.textContent = '?';
         li.appendChild(grip);
         li.addEventListener('dragstart', (e)=>{
           e.dataTransfer.effectAllowed = 'move';
@@ -127,7 +131,6 @@
     async function addFrontPageIfAny(doc, targetSize){
       const f = frontInput.files && frontInput.files[0];
       if (!f) return;
-      // PDF front page
       if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')){
         const bytes = await readAsArrayBuffer(f);
         const src = await PDFLib.PDFDocument.load(bytes);
@@ -145,7 +148,6 @@
         }
         return;
       }
-      // Image front page
       const bytes = await readAsArrayBuffer(f);
       let img;
       try {
@@ -154,7 +156,7 @@
         else
           img = await doc.embedJpg(bytes);
       } catch {
-        img = await doc.embedPng(bytes); // fallback
+        img = await doc.embedPng(bytes);
       }
       let tw, th;
       if (targetSize){ [tw, th] = targetSize; }
@@ -173,7 +175,6 @@
       const targetSize = PAGE_SIZES[sizeKey];
       const doc = await PDFLib.PDFDocument.create();
 
-      // Front page if provided
       await addFrontPageIfAny(doc, targetSize);
 
       for (const item of files){
@@ -199,7 +200,7 @@
 
       const bytes = await doc.save({ updateFieldAppearances: false });
       const blob = new Blob([bytes], { type: 'application/pdf' });
-      const blobUrl = URL.createObjectURL(blob);
+      blobUrl = URL.createObjectURL(blob);
       const name = `merged.pdf`;
       dlBtn.href = blobUrl;
       dlBtn.download = name;

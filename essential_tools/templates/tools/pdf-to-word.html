@@ -1,28 +1,32 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block content %}
-  <h1 class="h3 mb-2">PDF → Word</h1>
-  <p class="text-secondary">Convert a PDF into an editable DOCX.</p>
-
-  <form id="job-form" class="mb-3">
-    <input type="hidden" name="tool" value="pdf-to-word">
-    <div class="mb-3">
-      <label class="form-label">PDF file</label>
-      <input class="form-control" type="file" name="files" accept="application/pdf" required>
+  <div class="surface surface--panel">
+    <div class="panel-header">
+      <h1>PDF ? Word</h1>
+      <p>Transform your PDF into an editable DOCX in seconds.</p>
     </div>
-    <div class="d-flex gap-2 align-items-center">
-      <button id="pdf2word-go" class="btn btn-neon" type="submit">Convert</button>
-      <a id="pdf2word-download-main" class="btn btn-sm btn-outline-neon disabled" role="button" aria-disabled="true">Download</a>
-    </div>
-  </form>
 
-  <div id="job-status" class="d-none">
-    <div class="d-flex align-items-center gap-2">
-      <strong>Status:</strong> <span id="status-text">queued</span>
-      <div class="progress flex-grow-1" style="height: 6px;">
-        <div id="status-progress" class="progress-bar bg-neon" role="progressbar" style="width: 0%"></div>
+    <form id="job-form" class="content-form">
+      <input type="hidden" name="tool" value="pdf-to-word">
+      <div class="mb-3">
+        <label class="form-label">PDF file</label>
+        <input class="form-control" type="file" name="files" accept="application/pdf" required>
       </div>
+      <div class="d-flex gap-3 flex-wrap mt-4">
+        <button id="pdf2word-go" class="btn btn-neon" type="submit">Convert</button>
+        <a id="pdf2word-download-main" class="btn btn-outline-neon disabled" role="button" aria-disabled="true">Download</a>
+      </div>
+    </form>
+
+    <div id="job-status" class="job-status d-none mt-4">
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <strong>Status:</strong> <span id="status-text">queued</span>
+        <div class="progress flex-grow-1" style="height: 6px;">
+          <div id="status-progress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+        </div>
+      </div>
+      <ul id="results" class="list-unstyled mt-3"></ul>
     </div>
-    <ul id="results" class="list-unstyled mt-3"></ul>
   </div>
 {% endblock %}
 
@@ -33,14 +37,12 @@
   const statusText = document.getElementById('status-text');
   const statusProg = document.getElementById('status-progress');
   const results = document.getElementById('results');
-  const goBtn = document.getElementById('pdf2word-go');
   const dlMain = document.getElementById('pdf2word-download-main');
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
     fd.set('options', JSON.stringify({}));
-    // Reset main download button when starting a new job
     dlMain.classList.add('disabled');
     dlMain.setAttribute('aria-disabled', 'true');
     dlMain.removeAttribute('href');
@@ -62,7 +64,6 @@
     statusProg.style.width = `${data.progress || 0}%`;
     if (data.status === 'done') {
       const files = (data.result_manifest && data.result_manifest.files) || [];
-      // Prefer the top Download button and hide the bottom file list
       results.innerHTML = '';
       results.classList.add('d-none');
       if (files.length >= 1 && files[0].url){

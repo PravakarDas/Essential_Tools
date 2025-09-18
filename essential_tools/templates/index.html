@@ -1,17 +1,25 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block content %}
-  <h1 class="h3 mb-3">Tools</h1>
-  <div id="tools-grid" class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3">
-    {% for t in tools %}
-      <div class="col tool-item" data-index="{{ loop.index0 }}" data-title="{{ t.title|lower }}" data-desc="{{ t.desc|lower }}" data-category="{{ t.category }}">
-        <div class="card tool-card h-100">
-          <a href="/tools/{{ t.slug }}" class="stretched-link" aria-label="Open {{ t.title }}"></a>
-          <div class="card-body">
-            <h5 class="card-title">{{ t.title }}</h5>
-            <p class="card-text small text-secondary">{{ t.desc }}</p>
-          </div>
+  <section class="hero-panel">
+    <span class="eyebrow">Productivity crafted for PDFs</span>
+    <h1>All your PDF tools in one glassy hub</h1>
+    <p>Choose a tool below or use the global search to jump straight into action. Every workflow has a beautifully crafted surface.</p>
+  </section>
+
+  <section class="surface">
+    <div id="tools-grid" class="tool-grid">
+      {% for t in tools %}
+        <div class="tool-item" data-index="{{ loop.index0 }}" data-title="{{ t.title|lower }}" data-desc="{{ t.desc|lower }}" data-category="{{ t.category }}">
+          <a href="/tools/{{ t.slug }}" class="tool-card" aria-label="Open {{ t.title }}">
+            <span class="tool-card__icon" aria-hidden="true">{{ t.title[0]|upper }}</span>
+            <div class="tool-card__content">
+              <h3>{{ t.title }}</h3>
+              <p>{{ t.desc }}</p>
+            </div>
+          </a>
         </div>
-      </div>
-    {% endfor %}
-  </div>
+      {% endfor %}
+    </div>
+  </section>
 {% endblock %}
+

@@ -1,125 +1,162 @@
-(() => {
+﻿(() => {
   const storageKey = 'theme-preference';
   const html = document.documentElement;
-  const getColorPreference = () => localStorage.getItem(storageKey) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const body = document.body;
+
+  const getColorPreference = () => {
+    return localStorage.getItem(storageKey) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  };
+
   const theme = { value: getColorPreference() };
+
   const reflectPreference = () => {
     html.setAttribute('data-theme', theme.value);
     html.setAttribute('data-bs-theme', theme.value);
-    const btn = document.getElementById('theme-toggle');
-    if (btn){
-      btn.setAttribute('aria-label', theme.value);
-      btn.textContent = theme.value === 'dark' ? '🌙' : '☀️';
-    }
   };
-  const setPreference = () => { localStorage.setItem(storageKey, theme.value); reflectPreference(); };
+
+  const setPreference = () => {
+    localStorage.setItem(storageKey, theme.value);
+    reflectPreference();
+  };
+
   reflectPreference();
   window.addEventListener('load', reflectPreference);
-  const themeBtn = document.getElementById('theme-toggle');
-  if (themeBtn) themeBtn.addEventListener('click', () => { theme.value = (theme.value === 'light') ? 'dark' : 'light'; setPreference(); });
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ({matches:isDark}) => { theme.value = isDark ? 'dark' : 'light'; setPreference(); });
 
-  const searchHeader = document.getElementById('tool-search');
-  const searchSidebar = document.getElementById('sidebar-search');
+  const themeBtn = document.getElementById('theme-toggle');
+  if (themeBtn) {
+    themeBtn.addEventListener('click', () => {
+      theme.value = theme.value === 'light' ? 'dark' : 'light';
+      setPreference();
+    });
+  }
+
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+  prefersDark.addEventListener('change', ({ matches: isDark }) => {
+    theme.value = isDark ? 'dark' : 'light';
+    setPreference();
+  });
+
+  const sidebar = document.getElementById('app-sidebar');
+  const openNavBtn = document.getElementById('nav-toggle');
+  const closeNavBtn = document.getElementById('nav-close');
+
+  const openSidebar = () => {
+    if (!sidebar) return;
+    sidebar.classList.add('is-open');
+    body.classList.add('sidebar-open');
+  };
+
+  const closeSidebar = () => {
+    if (!sidebar) return;
+    sidebar.classList.remove('is-open');
+    body.classList.remove('sidebar-open');
+  };
+
+  if (openNavBtn) openNavBtn.addEventListener('click', openSidebar);
+  if (closeNavBtn) closeNavBtn.addEventListener('click', closeSidebar);
+  body.addEventListener('click', (event) => {
+    if (!body.classList.contains('sidebar-open')) return;
+    if (!sidebar) return;
+    if (sidebar.contains(event.target) || (openNavBtn && openNavBtn.contains(event.target))) return;
+    closeSidebar();
+  });
+
+  const searchInput = document.getElementById('tool-search');
   const grid = document.getElementById('tools-grid');
   const items = grid ? Array.from(grid.querySelectorAll('.tool-item')) : [];
-  let activeCat = 'all';
-  let lastActiveSearch = searchHeader || searchSidebar || null;
-  function applyFilters(){
-    const src = lastActiveSearch;
-    const q = (src && src.value || '').trim().toLowerCase();
-    items.forEach((el) => {
-      const cat = el.getAttribute('data-category') || '';
-      const txt = (el.getAttribute('data-title') + ' ' + el.getAttribute('data-desc'));
-      const matchCat = (activeCat === 'all') || (cat === activeCat);
-      const matchText = !q || txt.includes(q);
-      el.style.display = (matchCat && matchText) ? '' : 'none';
-    });
-  }
-  if (searchHeader && items.length){
-    searchHeader.addEventListener('input', (e)=>{ lastActiveSearch = e.target; applyFilters(); });
-  }
-  if (searchSidebar && items.length){
-    searchSidebar.addEventListener('input', (e)=>{ lastActiveSearch = e.target; applyFilters(); });
-  }
-  const sidebar = document.getElementById('sidebar');
-  if (sidebar && items.length){
-    sidebar.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-filter]');
-      if(!btn) return;
-      e.preventDefault();
-      activeCat = btn.getAttribute('data-filter');
-      sidebar.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
-      btn.classList.add('active');
-      applyFilters();
-    });
-  }
 
-  // Sidebar search toggle
-  const sidebarSearchToggle = document.getElementById('sidebar-search-toggle');
-  const sidebarSearchWrap = document.getElementById('sidebar-search-wrap');
-  if (sidebarSearchToggle && sidebarSearchWrap){
-    sidebarSearchToggle.addEventListener('click', () => {
-      const visible = sidebarSearchWrap.style.display !== 'none';
-      sidebarSearchWrap.style.display = visible ? 'none' : '';
-      sidebarSearchToggle.setAttribute('aria-expanded', String(!visible));
-      if (!visible) {
-        const input = document.getElementById('sidebar-search');
-        if (input) { input.focus(); lastActiveSearch = input; }
-      }
-    });
-  }
+  let activeCategory = 'all';
+  let activeSort = null;
+  const getQuery = () => (searchInput ? searchInput.value.trim().toLowerCase() : '');
 
-  
-  if (grid && items.length){
-    const sortChecks = Array.from(document.querySelectorAll('.sort-check'));
-    let currentSort = null;
-    const compareAZ = (a,b) => a.localeCompare(b, undefined, {sensitivity:'base'});
-    const sortGrid = (mode) => {
-      if (!mode){
-        const byIndex = [...items].sort((a,b)=> (parseInt(a.dataset.index||'0',10) - parseInt(b.dataset.index||'0',10)));
-        byIndex.forEach(el => grid.appendChild(el));
-        return;
-      }
-      const sorted = [...items].sort((a,b) => {
-        if (mode === 'az' || mode === 'za'){
-          const ta = (a.getAttribute('data-title')||'');
-          const tb = (b.getAttribute('data-title')||'');
-          const cmp = compareAZ(ta, tb);
-          return mode === 'az' ? cmp : -cmp;
-        }
-        if (mode === 'new'){
-          const ia = parseInt(a.dataset.index||'0',10);
-          const ib = parseInt(b.dataset.index||'0',10);
-          return ib - ia; 
-        }
-        return 0;
+  const applyFilters = () => {
+    if (!items.length) return;
+    const query = getQuery();
+    items.forEach((item) => {
+      const category = item.getAttribute('data-category') || '';
+      const text = `${item.getAttribute('data-title') || ''} ${(item.getAttribute('data-desc') || '')}`;
+      const matchesCategory = activeCategory === 'all' || category === activeCategory;
+      const matchesText = !query || text.includes(query);
+      item.style.display = matchesCategory && matchesText ? '' : 'none';
+    });
+  };
+
+  const sortItems = () => {
+    if (!grid || !items.length) return;
+    const sorted = [...items];
+    if (activeSort === 'az' || activeSort === 'za') {
+      sorted.sort((a, b) => {
+        const titleA = (a.getAttribute('data-title') || '').localeCompare((b.getAttribute('data-title') || ''), undefined, { sensitivity: 'base' });
+        return activeSort === 'az' ? titleA : -titleA;
       });
-      sorted.forEach(el => grid.appendChild(el));
-    };
-    const enforceSingle = (target) => {
-      sortChecks.forEach(cb => { if (cb !== target) cb.checked = false; });
-    };
-    sortChecks.forEach(cb => cb.addEventListener('change', (e) => {
-      const t = e.target;
-      if (t.checked){ enforceSingle(t); currentSort = t.value; }
-      else { currentSort = null; }
-      sortGrid(currentSort);
+    } else if (activeSort === 'new') {
+      sorted.sort((a, b) => parseInt(b.dataset.index || '0', 10) - parseInt(a.dataset.index || '0', 10));
+    } else {
+      sorted.sort((a, b) => parseInt(a.dataset.index || '0', 10) - parseInt(b.dataset.index || '0', 10));
+    }
+    sorted.forEach((el) => grid.appendChild(el));
+  };
+
+  if (searchInput) searchInput.addEventListener('input', () => applyFilters());
+
+  const categoryButtons = sidebar ? Array.from(sidebar.querySelectorAll('[data-filter]')) : [];
+  categoryButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      activeCategory = btn.dataset.filter || 'all';
+      categoryButtons.forEach((chip) => chip.classList.toggle('is-active', chip === btn));
       applyFilters();
-    }));
-  }
+      if (window.innerWidth <= 1024) closeSidebar();
+    });
+  });
+
+  const sortButtons = sidebar ? Array.from(sidebar.querySelectorAll('[data-sort]')) : [];
+  sortButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const sort = btn.dataset.sort;
+      if (sort === 'clear') {
+        activeSort = null;
+        sortButtons.forEach((chip) => chip.classList.remove('is-active'));
+      } else {
+        activeSort = sort;
+        sortButtons.forEach((chip) => {
+          if (chip.dataset.sort !== 'clear') chip.classList.toggle('is-active', chip === btn);
+        });
+      }
+      sortItems();
+      applyFilters();
+      if (window.innerWidth <= 1024) closeSidebar();
+    });
+  });
+
+  sortItems();
+  applyFilters();
 
   const JOBS_KEY = 'essential-tools-jobs';
-  function getJobs(){ try { return JSON.parse(sessionStorage.getItem(JOBS_KEY) || '[]'); } catch { return []; } }
-  function setJobs(ids){ sessionStorage.setItem(JOBS_KEY, JSON.stringify(ids)); }
-  window.essentialToolsAddJob = function(id){ const ids = new Set(getJobs()); ids.add(id); setJobs(Array.from(ids)); }
-  window.essentialToolsRemoveJob = function(id){ const ids = new Set(getJobs()); ids.delete(id); setJobs(Array.from(ids)); }
+  const getJobs = () => {
+    try { return JSON.parse(sessionStorage.getItem(JOBS_KEY) || '[]'); }
+    catch { return []; }
+  };
+  const setJobs = (ids) => sessionStorage.setItem(JOBS_KEY, JSON.stringify(ids));
+
+  window.essentialToolsAddJob = function(id){
+    const ids = new Set(getJobs());
+    ids.add(id);
+    setJobs(Array.from(ids));
+  };
+
+  window.essentialToolsRemoveJob = function(id){
+    const ids = new Set(getJobs());
+    ids.delete(id);
+    setJobs(Array.from(ids));
+  };
+
   window.addEventListener('beforeunload', () => {
     const ids = getJobs();
     ids.forEach((id) => {
-      try{ navigator.sendBeacon(`/api/jobs/${id}/delete`, new Blob([], {type: 'text/plain'})); } catch {}
+      try { navigator.sendBeacon(`/api/jobs/${id}/delete`, new Blob([], { type: 'text/plain' })); }
+      catch { /* noop */ }
     });
-    try{ sessionStorage.removeItem(JOBS_KEY); } catch {}
+    try { sessionStorage.removeItem(JOBS_KEY); } catch { /* noop */ }
   });
 })();
 

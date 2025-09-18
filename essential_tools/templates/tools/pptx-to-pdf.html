@@ -1,28 +1,32 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block content %}
-  <h1 class="h3 mb-2">PowerPoint → PDF</h1>
-  <p class="text-secondary">Convert PPT/PPTX to a PDF.</p>
-
-  <form id="job-form" class="mb-3">
-    <input type="hidden" name="tool" value="pptx-to-pdf">
-    <div class="mb-3">
-      <label class="form-label">PowerPoint file</label>
-      <input class="form-control" type="file" name="files" accept=".ppt,.pptx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" required>
+  <div class="surface surface--panel">
+    <div class="panel-header">
+      <h1>PowerPoint ? PDF</h1>
+      <p>Convert PPT or PPTX decks into a shareable PDF.</p>
     </div>
-    <div class="d-flex gap-2 align-items-center">
-      <button id="p2p-go" class="btn btn-neon" type="submit">Convert</button>
-      <a id="p2p-download-main" class="btn btn-sm btn-outline-neon disabled" role="button" aria-disabled="true">Download</a>
-    </div>
-  </form>
 
-  <div id="job-status" class="d-none">
-    <div class="d-flex align-items-center gap-2">
-      <strong>Status:</strong> <span id="status-text">queued</span>
-      <div class="progress flex-grow-1" style="height: 6px;">
-        <div id="status-progress" class="progress-bar bg-neon" role="progressbar" style="width: 0%"></div>
+    <form id="job-form" class="content-form">
+      <input type="hidden" name="tool" value="pptx-to-pdf">
+      <div class="mb-3">
+        <label class="form-label">PowerPoint file</label>
+        <input class="form-control" type="file" name="files" accept=".ppt,.pptx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" required>
       </div>
+      <div class="d-flex gap-3 flex-wrap mt-4">
+        <button id="p2p-go" class="btn btn-neon" type="submit">Convert</button>
+        <a id="p2p-download-main" class="btn btn-outline-neon disabled" role="button" aria-disabled="true">Download</a>
+      </div>
+    </form>
+
+    <div id="job-status" class="job-status d-none mt-4">
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <strong>Status:</strong> <span id="status-text">queued</span>
+        <div class="progress flex-grow-1" style="height: 6px;">
+          <div id="status-progress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+        </div>
+      </div>
+      <ul id="results" class="list-unstyled mt-3"></ul>
     </div>
-    <ul id="results" class="list-unstyled mt-3"></ul>
   </div>
 {% endblock %}
 
@@ -33,7 +37,6 @@
   const statusText = document.getElementById('status-text');
   const statusProg = document.getElementById('status-progress');
   const results = document.getElementById('results');
-  const goBtn = document.getElementById('p2p-go');
   const dlMain = document.getElementById('p2p-download-main');
 
   form.addEventListener('submit', async (e) => {
