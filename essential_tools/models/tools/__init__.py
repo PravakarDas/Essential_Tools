@@ -41,6 +41,8 @@ from . import pdf_to_images as _pdf_to_images  # noqa: E402
 from . import images_to_pdf as _images_to_pdf  # noqa: E402
 from . import sign as _sign  # noqa: E402
 from . import watermark as _watermark  # noqa: E402
+from . import html_to_pdf as _html_to_pdf  # noqa: E402
+from . import protect as _protect  # noqa: E402
 
 register(
     Tool(
@@ -158,6 +160,22 @@ register(
         processor=_watermark.process,
     )
 )
-register(Tool(slug="html-to-pdf", title="HTML -> PDF", desc="URL or HTML to PDF.", category="convert"))
+register(
+    Tool(
+        slug="html-to-pdf",
+        title="HTML -> PDF",
+        desc="Convert HTML content into PDF.",
+        category="convert",
+        processor=_html_to_pdf.process,
+    )
+)
 register(Tool(slug="unlock", title="Unlock PDF", desc="Remove password (with key).", category="secure"))
-register(Tool(slug="protect", title="Protect PDF", desc="Add password & permissions.", category="secure"))
+register(
+    Tool(
+        slug="protect",
+        title="Protect PDF",
+        desc="Password protect with AES-256.",
+        category="secure",
+        processor=_protect.process,
+    )
+)

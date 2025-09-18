@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h1 class="h3 mb-2">HTML → PDF</h1>
+  <p class="text-secondary">Paste HTML or upload an .html file, then choose how to render it.</p>
+
+  <form id="job-form" class="mb-3" novalidate>
+    <div class="mb-3">
+      <label class="form-label">HTML content</label>
+      <textarea id="html-input" class="form-control" rows="10" placeholder="&lt;!DOCTYPE html&gt;..."></textarea>
+      <div class="form-text">Optional: upload an HTML file below to override this text.</div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Upload HTML file (optional)</label>
+      <input id="html-file" class="form-control" type="file" accept="text/html,text/plain">
+    </div>
+    <div class="row g-2 mb-3">
+      <div class="col-12 col-md-6">
+        <label class="form-label">Output type</label>
+        <select id="mode" class="form-select">
+          <option value="render" selected>Render HTML (visual layout)</option>
+          <option value="source">Print raw code (preformatted)</option>
+        </select>
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Page size</label>
+        <select id="page-size" class="form-select">
+          <option value="a4" selected>A4</option>
+          <option value="letter">Letter</option>
+          <option value="legal">Legal</option>
+          <option value="tabloid">Tabloid</option>
+          <option value="continuous">Continuous (single long page)</option>
+        </select>
+      </div>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+      <button id="html-go" class="btn btn-neon" type="submit">Convert</button>
+      <a id="html-download" class="btn btn-sm btn-outline-neon disabled" role="button" aria-disabled="true">Download</a>
+    </div>
+  </form>
+
+  <div id="job-status" class="d-none">
+    <div class="d-flex align-items-center gap-2">
+      <strong>Status:</strong> <span id="status-text">queued</span>
+      <div class="progress flex-grow-1" style="height: 6px;">
+        <div id="status-progress" class="progress-bar bg-neon" role="progressbar" style="width: 0%"></div>
+      </div>
+    </div>
+    <ul id="results" class="list-unstyled mt-3"></ul>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const form = document.getElementById('job-form');
+  const htmlInput = document.getElementById('html-input');
+  const fileInput = document.getElementById('html-file');
+  const statusBox = document.getElementById('job-status');
+  const statusText = document.getElementById('status-text');
+  const statusProg = document.getElementById('status-progress');
+  const results = document.getElementById('results');
+  const dlMain = document.getElementById('html-download');
+
+  let currentJobId = null;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const content = htmlInput.value.trim();
+    if (!content && !fileInput.files.length){
+      alert('Provide HTML content or upload a file.');
+      return;
+    }
+    const fd = new FormData();
+    fd.append('tool', 'html-to-pdf');
+    if (fileInput.files.length){
+      fd.append('files', fileInput.files[0]);
+    }
+    const opts = {
+      html: fileInput.files.length ? '' : content,
+      mode: document.getElementById('mode').value,
+      page_size: document.getElementById('page-size').value,
+    };
+    fd.append('options', JSON.stringify(opts));
+    dlMain.classList.add('disabled');
+    dlMain.setAttribute('aria-disabled', 'true');
+    dlMain.removeAttribute('href');
+    dlMain.removeAttribute('download');
+    try {
+      const res = await fetch('/api/jobs', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Failed'); return; }
+      statusBox.classList.remove('d-none');
+      currentJobId = data.job_id;
+      if (window.essentialToolsAddJob) window.essentialToolsAddJob(currentJobId);
+      pollJob(currentJobId);
+    } catch (err) {
+      console.error(err);
+      alert('Error');
+    }
+  });
+
+  async function pollJob(id) {
+    const res = await fetch(`/api/jobs/${id}`);
+    const data = await res.json();
+    statusText.textContent = data.status;
+    statusProg.style.width = `${data.progress || 0}%`;
+    if (data.status === 'done') {
+      const files = (data.result_manifest && data.result_manifest.files) || [];
+      results.innerHTML = '';
+      results.classList.add('d-none');
+      if (files.length >= 1 && files[0].url){
+        dlMain.href = files[0].url;
+        dlMain.download = 'Html.pdf';
+        dlMain.classList.remove('disabled');
+        dlMain.removeAttribute('aria-disabled');
+      }
+      if (currentJobId && window.essentialToolsRemoveJob) window.essentialToolsRemoveJob(currentJobId);
+      currentJobId = null;
+      return;
+    }
+    if (data.status === 'error') {
+      results.classList.remove('d-none');
+      results.innerHTML = `<li class=\"text-danger\">${data.error_message || 'Unknown error'}</li>`;
+      if (currentJobId && window.essentialToolsRemoveJob) window.essentialToolsRemoveJob(currentJobId);
+      currentJobId = null;
+      return;
+    }
+    setTimeout(() => pollJob(id), 1000);
+  }
+</script>
+{% endblock %}
+
