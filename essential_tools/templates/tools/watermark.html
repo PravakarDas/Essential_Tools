@@ -9,9 +9,22 @@
       <input id="wm-pdf" class="form-control" type="file" accept="application/pdf" required>
     </div>
     <div class="mb-3">
-      <label class="form-label">Watermark image (optional)</label>
-      <input id="wm-image" class="form-control" type="file" accept="image/png,image/jpeg,image/bmp">
-      <div class="form-text">Leave empty to use text watermark.</div>
+      <label class="form-label">Watermark type</label>
+      <div class="d-flex gap-3 flex-wrap">
+        <div class="form-check">
+          <input id="mode-image" class="form-check-input" type="radio" name="wm-mode" value="image" checked>
+          <label class="form-check-label" for="mode-image">Image watermark</label>
+        </div>
+        <div class="form-check">
+          <input id="mode-text" class="form-check-input" type="radio" name="wm-mode" value="text">
+          <label class="form-check-label" for="mode-text">Text watermark</label>
+        </div>
+      </div>
+    </div>
+    <div class="mb-3" id="wm-image-group">
+      <label class="form-label">Watermark image</label>
+      <input id="wm-image" class="form-control" type="file" accept="image/png,image/jpeg,image/bmp" required>
+      <div class="form-text">PNG with transparency recommended.</div>
     </div>
     <div class="row g-2 mb-3">
       <div class="col-12 col-md-6">
@@ -23,13 +36,13 @@
           <option value="stretch">Full Page</option>
         </select>
       </div>
-      <div class="col-12 col-md-6">
+      <div class="col-12 col-md-6" id="wm-opacity-group">
         <label class="form-label">Image opacity</label>
         <input id="wm-opacity" class="form-control" type="number" min="0.1" max="1" step="0.05" value="0.3">
       </div>
     </div>
 
-    <div class="card card-body mb-3">
+    <div class="card card-body mb-3" id="wm-text-card">
       <h6 class="card-title mb-2">Text Watermark</h6>
       <div class="row g-2">
         <div class="col-12 col-md-6">
@@ -87,6 +100,10 @@
   const form = document.getElementById('job-form');
   const pdfInput = document.getElementById('wm-pdf');
   const imgInput = document.getElementById('wm-image');
+  const modeInputs = document.querySelectorAll('input[name="wm-mode"]');
+  const imageGroup = document.getElementById('wm-image-group');
+  const opacityGroup = document.getElementById('wm-opacity-group');
+  const textCard = document.getElementById('wm-text-card');
   const statusBox = document.getElementById('job-status');
   const statusText = document.getElementById('status-text');
   const statusProg = document.getElementById('status-progress');
@@ -101,10 +118,15 @@
       alert('Select a PDF');
       return;
     }
+    const mode = document.querySelector('input[name="wm-mode"]:checked').value;
+    if (mode === 'image' && !imgInput.files.length){
+      alert('Select a watermark image or switch to Text mode');
+      return;
+    }
     const fd = new FormData();
     fd.append('tool', 'watermark');
     fd.append('files', pdfInput.files[0]);
-    if (imgInput.files.length){
+    if (mode === 'image' && imgInput.files.length){
       fd.append('files', imgInput.files[0]);
     }
     const opts = {
@@ -116,7 +138,7 @@
       bold: document.getElementById('wm-bold').checked,
       italic: document.getElementById('wm-italic').checked,
       underline: document.getElementById('wm-underline').checked,
-      mode: imgInput.files.length ? 'image' : 'text',
+      mode,
     };
     fd.append('options', JSON.stringify(opts));
     dlMain.classList.add('disabled');
@@ -162,5 +184,22 @@
     }
     setTimeout(() => pollJob(id), 1000);
   }
+
+  function updateMode(){
+    const mode = document.querySelector('input[name="wm-mode"]:checked').value;
+    const isImage = mode === 'image';
+    imageGroup.classList.toggle('d-none', !isImage);
+    opacityGroup.classList.toggle('d-none', !isImage);
+    textCard.classList.toggle('d-none', isImage);
+    imgInput.required = isImage;
+    imgInput.disabled = !isImage;
+    document.getElementById('wm-opacity').disabled = !isImage;
+    if (!isImage) {
+      imgInput.value = '';
+    }
+  }
+
+  modeInputs.forEach((input) => input.addEventListener('change', updateMode));
+  updateMode();
 </script>
 {% endblock %}

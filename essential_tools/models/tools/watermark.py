@@ -29,11 +29,15 @@ FONT_MAP = {
 }
 
 
-def _prepare_watermark_image(path: str, opacity: float) -> bytes:
+def _prepare_watermark_image(path: str, opacity: float) -> Image.Image:
     img = Image.open(path).convert("RGBA")
     alpha = img.split()[-1]
     alpha = alpha.point(lambda v: int(v * opacity))
     img.putalpha(alpha)
+    return img
+
+
+def _image_to_bytes(img: Image.Image) -> tuple[bytes, int, int]:
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue(), img.width, img.height
@@ -94,8 +98,7 @@ def _apply_image(page, stream: bytes, source_size: tuple[int, int], style: str):
             y += target_h + 10
     else:
         if style == "stretch":
-            box = rect
-            page.insert_image(box, stream=stream, overlay=True)
+            page.insert_image(rect, stream=stream, overlay=True)
             return
         target_w = rect.width * 0.5
         ratio = width_px / height_px
@@ -106,8 +109,7 @@ def _apply_image(page, stream: bytes, source_size: tuple[int, int], style: str):
         x0 = rect.x0 + (rect.width - target_w) / 2
         y0 = rect.y0 + (rect.height - target_h) / 2
         box = fitz.Rect(x0, y0, x0 + target_w, y0 + target_h)
-        rotate = 45 if style == "diagonal" else 0
-        page.insert_image(box, stream=stream, overlay=True, rotate=rotate)
+        page.insert_image(box, stream=stream, overlay=True)
 
 
 def process(job, upload_paths: List[str]) -> Dict[str, List[str]]:
@@ -134,7 +136,12 @@ def process(job, upload_paths: List[str]) -> Dict[str, List[str]]:
             raise ValueError("Upload a watermark image or choose text mode")
         opacity = float(job.options.get("opacity", 0.2))
         opacity = min(max(opacity, 0.05), 1.0)
-        img_stream, w_px, h_px = _prepare_watermark_image(image_path, opacity)
+        base_img = _prepare_watermark_image(image_path, opacity)
+        if style == "diagonal":
+            styled_img = base_img.rotate(45, expand=True, resample=Image.BICUBIC)
+        else:
+            styled_img = base_img
+        img_stream, w_px, h_px = _image_to_bytes(styled_img)
         for page in doc:
             _apply_image(page, img_stream, (w_px, h_px), style)
     else:
